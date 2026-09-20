@@ -50,7 +50,18 @@ export const turns = pgTable('turns', {
   resolvedAt: timestamp('resolved_at'),
 });
 
+/** Single-use, expiring magic-link tokens (only the hash is stored). */
+export const authTokens = pgTable('auth_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: text('email').notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
+export type AuthToken = typeof authTokens.$inferSelect;
 export type Game = typeof games.$inferSelect;
 export type Turn = typeof turns.$inferSelect;
 export type NewTurn = typeof turns.$inferInsert;
