@@ -107,15 +107,15 @@ groups build on, so it must land before fan-out.
 
 Replaces the SLICE-03 dev stub with real identity.
 
-- [ ] **AUTH-01** Choose auth approach (Auth.js email provider vs Marketplace
+- [x] **AUTH-01** Choose auth approach (Auth.js email provider vs Marketplace
   integration; PRD TQ1) → record in `DECISIONS.md`.
-- [ ] **AUTH-02** Magic-link request: `POST /api/auth/request` issues a signed,
+- [x] **AUTH-02** Magic-link request: `POST /api/auth/request` issues a signed,
   expiring token for an email. Test: token verifies before expiry, rejects after.
-- [ ] **AUTH-03** Magic-link callback signs the user in and creates the `user`
+- [x] **AUTH-03** Magic-link callback signs the user in and creates the `user`
   row if new. Test: valid link → session; reused/expired link → rejected.
-- [ ] **AUTH-04** Session middleware / current-user resolver. Test: protected
+- [x] **AUTH-04** Session middleware / current-user resolver. Test: protected
   route 401s without session, 200s with.
-- [ ] **AUTH-05** Sign-in / sign-out UI + "check your email" state. Test
+- [x] **AUTH-05** Sign-in / sign-out UI + "check your email" state. Test
   (component): submitting an email calls the request endpoint.
 - [ ] **AUTH-06** Swap SLICE-03 stub for real sessions everywhere; delete the dev
   switch. Test: SLICE E2E still green under real auth.

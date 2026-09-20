@@ -83,3 +83,18 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
   (as with the Python apps) is a clean fit. `next start` is long-lived, which
   suits postgres-js pooling. No personal API keys involved, so the personal-key
   guardrail did not apply; only Railway's managed `DATABASE_URL` is a secret.
+
+### D8 — Auth: minimal custom magic-link (not Auth.js)
+- **Date:** 2026-09-20
+- **Status:** 🟡 Proposed by orchestrator — pending Evan confirm.
+- **Chose:** a small, self-built magic-link flow: single-use, expiring tokens
+  stored hashed in an `auth_tokens` table; sign-in sets an HMAC-signed httpOnly
+  session cookie (`AUTH_SECRET`). Email delivery goes through a **pluggable
+  transport** (dev: logs the link; prod: a provider, TBD).
+- **Rejected:** Auth.js / NextAuth — heavier, its own adapter + schema, more
+  friction on Next 16 for a 2–4 person private game with no sensitive data.
+- **Why:** keeps with the project's simple/TDD/local-first ethos; the whole flow
+  is unit-testable without a live email provider, and the provider stays behind
+  an interface so wiring it (a personal-key/guardrail step) is deferred and
+  isolated. Auth is built but **not enforced** until email works, so the live
+  app keeps running on the dev player-switch meanwhile.
