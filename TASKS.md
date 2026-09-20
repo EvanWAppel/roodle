@@ -98,7 +98,7 @@ groups build on, so it must land before fan-out.
   outcome shown. Test (component): correct guess renders success + point.
 - [x] **SLICE-12** **End-to-end slice test**: Player A draws & submits → Player B
   sees pending → guesses correctly → point recorded. This green = the loop works.
-- [ ] **SLICE-13** Deploy the slice; Evan + Christine play one manual round to
+- [x] **SLICE-13** Deploy the slice; Evan + Christine play one manual round to
   confirm it feels right. (Check-in gate before fan-out.)
 
 ---

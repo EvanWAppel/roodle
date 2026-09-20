@@ -67,3 +67,19 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
   500). `globalThis` is shared across both graphs in one process, guaranteeing
   one instance. Caught only by a runtime curl of `/scores`; tests use in-memory
   DBs and never hit it — a reminder to smoke real routes, not just units.
+
+### D7 — Deploy target: Railway (exception to the Next.js→Vercel convention)
+- **Date:** 2026-09-20
+- **Status:** ✅ Confirmed by Evan (explicitly asked to deploy to Railway).
+- **Chose:** deploy on **Railway** — app service `roodle-web` + a Railway
+  Postgres addon; `DATABASE_URL` injected via a service reference
+  (`${{Postgres.DATABASE_URL}}`); migrations run on first boot. Public URL:
+  https://roodle-web-production.up.railway.app · repo:
+  https://github.com/EvanWAppel/roodle (public, branch-protected).
+- **Rejected:** Vercel + Neon (Evan's standing "Next.js frontends → Vercel"
+  convention).
+- **Why:** roodle is a **full-stack** Next.js app (API + Postgres), not a pure
+  frontend, so co-locating the long-running Node server and its DB on Railway
+  (as with the Python apps) is a clean fit. `next start` is long-lived, which
+  suits postgres-js pooling. No personal API keys involved, so the personal-key
+  guardrail did not apply; only Railway's managed `DATABASE_URL` is a secret.
