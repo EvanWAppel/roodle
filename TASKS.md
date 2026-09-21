@@ -194,7 +194,7 @@ Deepens SLICE-08/09.
 
 ## Group NOTIF — Email turn nudges  ⇄ parallel-safe · depends on SLICE
 
-- [ ] **NOTIF-01** Choose email provider + verified sender domain (PRD TQ2) →
+- [x] **NOTIF-01** Choose email provider + verified sender domain (PRD TQ2) →
   record in `DECISIONS.md`.
 - [ ] **NOTIF-02** Email-send module (magic links + nudges), mockable in tests.
   Test: send is called with correct recipient/subject/body; failures surface
