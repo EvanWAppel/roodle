@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { getCurrentUser } from '@/auth/currentUser';
+import { emailConfigured } from '@/auth/email';
 
 export default async function Home() {
   const user = await getCurrentUser();
+  const canSignIn = emailConfigured();
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8 text-center">
       <h1 className="text-4xl font-bold">Roodle</h1>
@@ -19,11 +21,11 @@ export default async function Home() {
               </button>
             </form>
           </span>
-        ) : (
+        ) : canSignIn ? (
           <Link href="/signin" className="text-blue-600 underline">
             Sign in
           </Link>
-        )}
+        ) : null}
       </div>
       <div className="flex gap-4">
         <Link

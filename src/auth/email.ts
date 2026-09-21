@@ -56,9 +56,17 @@ export class ResendTransport implements EmailTransport {
  * Pick the transport from env: Resend when a key + from-address are configured,
  * otherwise log the link server-side (dev, or prod before email is wired).
  */
+/** True when a real email provider is configured (so sign-in can deliver). */
+export function emailConfigured(): boolean {
+  return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+}
+
 export function defaultTransport(): EmailTransport {
-  const key = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
-  if (key && from) return new ResendTransport(key, from);
+  if (emailConfigured()) {
+    return new ResendTransport(
+      process.env.RESEND_API_KEY!,
+      process.env.EMAIL_FROM!,
+    );
+  }
   return new ConsoleTransport();
 }

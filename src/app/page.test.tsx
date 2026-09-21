@@ -5,6 +5,8 @@ import { render, screen } from '@testing-library/react';
 vi.mock('@/auth/currentUser', () => ({
   getCurrentUser: vi.fn(async () => null),
 }));
+// Pretend email is configured so the sign-in link renders.
+vi.mock('@/auth/email', () => ({ emailConfigured: () => true }));
 
 import Home from './page';
 
