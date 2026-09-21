@@ -98,3 +98,17 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
   an interface so wiring it (a personal-key/guardrail step) is deferred and
   isolated. Auth is built but **not enforced** until email works, so the live
   app keeps running on the dev player-switch meanwhile.
+
+### D9 — Email provider: Resend on Evan's shared account (informed acceptance)
+- **Date:** 2026-09-21
+- **Status:** ✅ Confirmed by Evan.
+- **Chose:** Resend, sending from the verified **krangly.com** domain, via a
+  dedicated revocable `roodle` API key on Evan's existing (shared) Resend
+  account — the same one Wordly uses.
+- **Rejected:** a fully isolated, separate Resend account/workspace.
+- **Why:** Evan explicitly accepted the tradeoff — free tier has no spend (worst
+  case is exhausting the shared ~3k/mo quota, not a charge), Wordly already runs
+  the same pattern, and roodle uses low volume. Mitigations: a dedicated key
+  (revocable without touching Wordly) + rate-limiting on `/api/auth/request`
+  (4/15min per email, 30/15min per IP). Verified in prod: a real magic link
+  delivered (HTTP 200 from Resend). Evan will re-evaluate if it hits the cap.
