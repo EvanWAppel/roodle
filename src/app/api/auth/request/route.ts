@@ -2,12 +2,25 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/db/client';
 import { requestMagicLink } from '@/auth/service';
 import { defaultTransport } from '@/auth/email';
+import { RateLimiter } from '@/auth/rateLimit';
+
+const WINDOW_MS = 15 * 60 * 1000;
+const perEmail = new RateLimiter(4, WINDOW_MS);
+const perIp = new RateLimiter(30, WINDOW_MS);
 
 /** POST /api/auth/request { email } — issue + "send" a magic link (AUTH-02). */
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { email?: string } | null;
   if (!body || typeof body.email !== 'string') {
     return NextResponse.json({ error: 'missing email' }, { status: 400 });
+  }
+
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  if (!perEmail.check(body.email.trim().toLowerCase()) || !perIp.check(ip)) {
+    return NextResponse.json(
+      { error: 'too many requests, try again later' },
+      { status: 429 },
+    );
   }
 
   const db = await getDb();
