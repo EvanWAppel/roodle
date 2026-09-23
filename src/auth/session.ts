@@ -18,6 +18,14 @@ function sign(payload: string): string {
 export const SESSION_COOKIE = 'roodle_session';
 export const SESSION_MAX_AGE_S = 60 * 60 * 24 * 30; // 30 days
 
+/**
+ * Short-lived cookie holding a same-origin path to return to after sign-in
+ * (e.g. an invite-accept URL the user hit while signed out). The callback reads
+ * and clears it. Only relative paths are honored to prevent open redirects.
+ */
+export const POST_LOGIN_COOKIE = 'roodle_post_login';
+export const POST_LOGIN_MAX_AGE_S = 15 * 60; // 15 minutes
+
 /** Create a tamper-evident session token binding a user id (HMAC-signed). */
 export function createSessionToken(userId: string, iat: number = Date.now()): string {
   const payload = Buffer.from(JSON.stringify({ uid: userId, iat })).toString(

@@ -4,8 +4,16 @@ import { consumeMagicLink } from '@/auth/service';
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_S,
+  POST_LOGIN_COOKIE,
   createSessionToken,
 } from '@/auth/session';
+
+/** Only same-origin relative paths are honored, to prevent open redirects. */
+function safeReturnTo(value: string | undefined): string | null {
+  if (!value) return null;
+  if (!value.startsWith('/') || value.startsWith('//')) return null;
+  return value;
+}
 
 /** GET /api/auth/callback?token=… — verify the link, start a session (AUTH-03). */
 export async function GET(req: Request) {
@@ -28,7 +36,16 @@ export async function GET(req: Request) {
     throw e;
   }
 
-  const res = NextResponse.redirect(new URL('/', req.url));
+  // Return the user to a deferred destination (e.g. an invite-accept URL they
+  // hit while signed out), else home. Only same-origin paths are honored.
+  const rawReturn = req.headers
+    .get('cookie')
+    ?.match(new RegExp(`${POST_LOGIN_COOKIE}=([^;]+)`))?.[1];
+  const returnTo = safeReturnTo(
+    rawReturn ? decodeURIComponent(rawReturn) : undefined,
+  );
+
+  const res = NextResponse.redirect(new URL(returnTo ?? '/', req.url));
   res.cookies.set(SESSION_COOKIE, createSessionToken(userId), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -36,5 +53,8 @@ export async function GET(req: Request) {
     path: '/',
     maxAge: SESSION_MAX_AGE_S,
   });
+  if (returnTo) {
+    res.cookies.set(POST_LOGIN_COOKIE, '', { path: '/', maxAge: 0 });
+  }
   return res;
 }
