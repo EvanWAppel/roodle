@@ -28,6 +28,8 @@ const someStrokes = [
 ];
 
 describe('SLICE-12 end-to-end: draw → pending → guess → point (friend-enforced)', () => {
+  let userA: User;
+  let userB: User;
   let playerA: string;
   let playerB: string;
   let gameId: string;
@@ -41,6 +43,8 @@ describe('SLICE-12 end-to-end: draw → pending → guess → point (friend-enfo
       displayA: 'Evan',
       displayB: 'Christine',
     });
+    userA = pair.userA;
+    userB = pair.userB;
     playerA = pair.userA.id;
     playerB = pair.userB.id;
     gameId = pair.game.id;
@@ -62,6 +66,8 @@ describe('SLICE-12 end-to-end: draw → pending → guess → point (friend-enfo
     expect(created.status).toBe('awaiting_guess');
     expect(created.drawerId).toBe(playerA); // drawer came from the session
 
+    // B is now the session user: they list their own pending turns and guess.
+    currentUser.mockResolvedValue(userB);
     const listRes = await listTurnsRoute(
       new Request(`http://test/api/turns?for=${playerB}`),
     );
@@ -88,6 +94,49 @@ describe('SLICE-12 end-to-end: draw → pending → guess → point (friend-enfo
       post('http://test/api/turns', { gameId }),
     );
     expect(res.status).toBe(400);
+  });
+
+  it('GET /api/turns 401s unauthenticated and 403s listing another user’s queue', async () => {
+    currentUser.mockResolvedValue(null);
+    const unauth = await listTurnsRoute(
+      new Request(`http://test/api/turns?for=${playerB}`),
+    );
+    expect(unauth.status).toBe(401);
+
+    // Signed in as A, but trying to read B's pending turns (which leak the word).
+    currentUser.mockResolvedValue(userA);
+    const forbidden = await listTurnsRoute(
+      new Request(`http://test/api/turns?for=${playerB}`),
+    );
+    expect(forbidden.status).toBe(403);
+  });
+
+  it('guess route 401s unauthenticated and 403s a non-guesser', async () => {
+    const created = (await (
+      await createTurnRoute(
+        post('http://test/api/turns', {
+          gameId,
+          guesserId: playerB,
+          word: 'cat',
+          strokes: someStrokes,
+        }),
+      )
+    ).json()) as Turn;
+
+    currentUser.mockResolvedValue(null);
+    const unauth = await guessRoute(
+      post(`http://test/api/turns/${created.id}/guess`, { guess: 'cat' }),
+      { params: Promise.resolve({ id: created.id }) },
+    );
+    expect(unauth.status).toBe(401);
+
+    // A is the drawer, not the guesser — must not be able to guess/give up.
+    currentUser.mockResolvedValue(userA);
+    const forbidden = await guessRoute(
+      post(`http://test/api/turns/${created.id}/guess`, { action: 'give_up' }),
+      { params: Promise.resolve({ id: created.id }) },
+    );
+    expect(forbidden.status).toBe(403);
   });
 });
 

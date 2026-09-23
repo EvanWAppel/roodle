@@ -8,11 +8,25 @@ import {
   createSessionToken,
 } from '@/auth/session';
 
-/** Only same-origin relative paths are honored, to prevent open redirects. */
+/**
+ * Only same-origin relative paths are honored, to prevent open redirects.
+ * Resolving against a placeholder origin catches tricks that string checks miss:
+ * `//evil.com`, `/\evil.com`, and backslash variants all normalize to a
+ * different origin (WHATWG treats `\` as `/`), so any value that doesn't stay on
+ * the placeholder origin is rejected.
+ */
 function safeReturnTo(value: string | undefined): string | null {
   if (!value) return null;
-  if (!value.startsWith('/') || value.startsWith('//')) return null;
-  return value;
+  if (!value.startsWith('/')) return null;
+  const PLACEHOLDER = 'http://placeholder.invalid';
+  let resolved: URL;
+  try {
+    resolved = new URL(value, PLACEHOLDER);
+  } catch {
+    return null;
+  }
+  if (resolved.origin !== PLACEHOLDER) return null;
+  return resolved.pathname + resolved.search + resolved.hash;
 }
 
 /** GET /api/auth/callback?token=… — verify the link, start a session (AUTH-03). */

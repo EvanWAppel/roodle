@@ -61,11 +61,22 @@ export async function POST(req: Request) {
   return NextResponse.json(turn, { status: 201 });
 }
 
-/** GET /api/turns?for=<guesserId> — list a guesser's pending turns (SLICE-05). */
+/**
+ * GET /api/turns?for=<guesserId> — list a guesser's pending turns (SLICE-05).
+ * Only the guesser themselves may list their pending turns: these expose the
+ * word being drawn, so a caller can't read another user's queue.
+ */
 export async function GET(req: Request) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  }
   const guesserId = new URL(req.url).searchParams.get('for');
   if (!guesserId) {
     return NextResponse.json({ error: 'missing ?for' }, { status: 400 });
+  }
+  if (guesserId !== user.id) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
   const db = await getDb();
   const turns = await listPendingTurnsFor(db, guesserId);

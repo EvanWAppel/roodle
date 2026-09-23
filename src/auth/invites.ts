@@ -23,6 +23,18 @@ export class DuplicateInviteError extends Error {
 }
 
 /**
+ * The signed-in user accepting the invite is not the person it was addressed to.
+ * Invites are bearer tokens sent to a specific email; only that email may claim
+ * them, so a leaked/forwarded link can't hijack the friendship.
+ */
+export class InviteEmailMismatchError extends Error {
+  constructor() {
+    super('invite addressed to a different email');
+    this.name = 'InviteEmailMismatchError';
+  }
+}
+
+/**
  * Issue a friend invite. Stores only the token hash; returns the raw token for
  * the caller to build the accept link. Throws on invalid email, or
  * DuplicateInviteError when a pending invite to the same email already exists.
@@ -71,15 +83,16 @@ export interface AcceptResult {
 
 /**
  * Accept an invite by raw token for the accepting user. Validates the token
- * (exists, not expired), creates the friendship + game if absent, and marks the
- * invite accepted. Idempotent: re-accepting an already-accepted invite returns
- * the same friendship + game without creating duplicates. Throws a clear error
- * for an unknown/invalid or expired token.
+ * (exists, not expired) and that the accepting user's email matches the address
+ * the invite was sent to, then creates the friendship + game if absent and marks
+ * the invite accepted. Idempotent: re-accepting an already-accepted invite
+ * returns the same friendship + game without creating duplicates. Throws a clear
+ * error for an unknown/invalid or expired token, or an email mismatch.
  */
 export async function acceptInvite(
   db: DB,
   rawToken: string,
-  acceptingUserId: string,
+  acceptingUser: { id: string; email: string },
   now: number = Date.now(),
 ): Promise<AcceptResult> {
   const hash = hashToken(rawToken);
@@ -101,16 +114,22 @@ export async function acceptInvite(
     throw new Error('invite expired');
   }
 
+  // Bind the invite to its addressee: only the invited email may claim it, so a
+  // leaked link can't friend a stranger to the inviter.
+  if (normalizeEmail(acceptingUser.email) !== invite.inviteeEmail) {
+    throw new InviteEmailMismatchError();
+  }
+
   // Friendship + game are between the inviter and the accepting user. Both
   // ensure* calls are idempotent, so re-accepting is safe.
-  const friendship = await ensureFriendship(db, invite.inviterId, acceptingUserId);
-  const game = await ensureGameForPair(db, invite.inviterId, acceptingUserId);
+  const friendship = await ensureFriendship(db, invite.inviterId, acceptingUser.id);
+  const game = await ensureGameForPair(db, invite.inviterId, acceptingUser.id);
 
   let accepted = invite;
   if (invite.status !== 'accepted') {
     const [row] = await db
       .update(invites)
-      .set({ status: 'accepted', acceptedByUserId: acceptingUserId })
+      .set({ status: 'accepted', acceptedByUserId: acceptingUser.id })
       .where(eq(invites.id, invite.id))
       .returning();
     accepted = row;

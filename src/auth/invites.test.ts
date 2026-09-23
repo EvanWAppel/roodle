@@ -6,7 +6,12 @@ import type { DB } from '@/db/client';
 import { users, invites } from '@/db/schema';
 import { areFriends, findGameForPair } from '@/db/friends';
 import { hashToken } from './tokens';
-import { createInvite, acceptInvite, DuplicateInviteError } from './invites';
+import {
+  createInvite,
+  acceptInvite,
+  DuplicateInviteError,
+  InviteEmailMismatchError,
+} from './invites';
 
 async function makeUser(db: DB, email: string, displayName: string) {
   const [u] = await db.insert(users).values({ email, displayName }).returning();
@@ -53,7 +58,7 @@ describe('invites service (GROUP-02 / GROUP-03)', () => {
       const invitee = await makeUser(db, 'friend@example.com', 'Friend');
       const { token } = await createInvite(db, inviter.id, invitee.email);
 
-      const result = await acceptInvite(db, token, invitee.id);
+      const result = await acceptInvite(db, token, invitee);
       expect(result.friendship).toBeTruthy();
       expect(result.game).toBeTruthy();
 
@@ -74,16 +79,29 @@ describe('invites service (GROUP-02 / GROUP-03)', () => {
       // Issue it 8 days ago so its 7-day expiry is now in the past.
       const past = Date.now() - 8 * 24 * 60 * 60 * 1000;
       const { token } = await createInvite(db, inviter.id, invitee.email, past);
-      await expect(acceptInvite(db, token, invitee.id)).rejects.toThrow(
-        /expired/,
-      );
+      await expect(acceptInvite(db, token, invitee)).rejects.toThrow(/expired/);
     });
 
     it('rejects an unknown token', async () => {
       const invitee = await makeUser(db, 'friend@example.com', 'Friend');
-      await expect(acceptInvite(db, 'bogus', invitee.id)).rejects.toThrow(
+      await expect(acceptInvite(db, 'bogus', invitee)).rejects.toThrow(
         /invalid/,
       );
+    });
+
+    it('rejects a user whose email is not the one the invite was sent to', async () => {
+      const inviter = await makeUser(db, 'inviter@example.com', 'Inviter');
+      const invitee = await makeUser(db, 'friend@example.com', 'Friend');
+      const mallory = await makeUser(db, 'mallory@example.com', 'Mallory');
+      const { token } = await createInvite(db, inviter.id, invitee.email);
+
+      // Mallory holds the token but it wasn't addressed to her — reject, and
+      // don't friend her to the inviter.
+      await expect(acceptInvite(db, token, mallory)).rejects.toBeInstanceOf(
+        InviteEmailMismatchError,
+      );
+      expect(await areFriends(db, inviter.id, mallory.id)).toBe(false);
+      expect(await areFriends(db, inviter.id, invitee.id)).toBe(false);
     });
 
     it('is idempotent: re-accepting creates no duplicates and does not crash', async () => {
@@ -91,8 +109,8 @@ describe('invites service (GROUP-02 / GROUP-03)', () => {
       const invitee = await makeUser(db, 'friend@example.com', 'Friend');
       const { token } = await createInvite(db, inviter.id, invitee.email);
 
-      const first = await acceptInvite(db, token, invitee.id);
-      const second = await acceptInvite(db, token, invitee.id);
+      const first = await acceptInvite(db, token, invitee);
+      const second = await acceptInvite(db, token, invitee);
       expect(second.friendship.id).toBe(first.friendship.id);
       expect(second.game.id).toBe(first.game.id);
 

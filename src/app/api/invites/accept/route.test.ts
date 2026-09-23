@@ -45,6 +45,22 @@ describe('GET /api/invites/accept (GROUP-03)', () => {
     expect(await findGameForPair(db, inviter.id, invitee.id)).toBeTruthy();
   });
 
+  it('403s when a signed-in user other than the addressee presents the token', async () => {
+    const [mallory] = await db
+      .insert(users)
+      .values({ email: 'mallory@example.com', displayName: 'Mallory' })
+      .returning();
+    currentUser.mockResolvedValue(mallory);
+    const { token } = await createInvite(db, inviter.id, invitee.email);
+    const res = await acceptRoute(
+      new Request(`http://test/api/invites/accept?token=${token}`),
+    );
+    expect(res.status).toBe(403);
+    // The friendship was not hijacked.
+    expect(await areFriends(db, inviter.id, mallory.id)).toBe(false);
+    expect(await areFriends(db, inviter.id, invitee.id)).toBe(false);
+  });
+
   it('redirects an unauthenticated invitee to sign-in (deferring the accept)', async () => {
     currentUser.mockResolvedValue(null);
     const { token } = await createInvite(db, inviter.id, invitee.email);

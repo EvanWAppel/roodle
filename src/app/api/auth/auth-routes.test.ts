@@ -91,6 +91,29 @@ describe('auth routes (AUTH-02/03 wiring)', () => {
     expect(cbRes.headers.get('location')).toMatch(/\/$/);
   });
 
+  it.each(['/\\evil.com', '/\\/evil.com', '\\\\evil.com', '/%2F%2Fevil.com'])(
+    'does not redirect off-origin for backslash/encoded trick %s',
+    async (evil) => {
+      const reqRes = await requestRoute(
+        new Request('http://test/api/auth/request', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: 'friend3@example.com' }),
+        }),
+      );
+      const { devLink } = (await reqRes.json()) as { devLink: string };
+      const cbRes = await callbackRoute(
+        new Request(devLink, {
+          headers: { cookie: `roodle_post_login=${encodeURIComponent(evil)}` },
+        }),
+      );
+      const location = cbRes.headers.get('location')!;
+      // Whatever the guard returns, the resolved redirect must stay on the app
+      // origin (http://test), never evil.com.
+      expect(new URL(location).host).toBe('test');
+    },
+  );
+
   it('a bad token redirects to sign-in with an error', async () => {
     const res = await callbackRoute(
       new Request('http://test/api/auth/callback?token=bogus'),

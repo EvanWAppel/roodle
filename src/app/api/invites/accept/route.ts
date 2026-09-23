@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/db/client';
 import { getCurrentUser } from '@/auth/currentUser';
-import { acceptInvite } from '@/auth/invites';
+import { acceptInvite, InviteEmailMismatchError } from '@/auth/invites';
 import { POST_LOGIN_COOKIE, POST_LOGIN_MAX_AGE_S } from '@/auth/session';
 
 /**
@@ -32,9 +32,15 @@ export async function GET(req: Request) {
 
   const db = await getDb();
   try {
-    await acceptInvite(db, token, user.id);
+    await acceptInvite(db, token, { id: user.id, email: user.email });
   } catch (e) {
     // Expected token failures map to client errors; anything else propagates.
+    if (e instanceof InviteEmailMismatchError) {
+      return NextResponse.json(
+        { error: 'this invite was sent to a different email' },
+        { status: 403 },
+      );
+    }
     if (e instanceof Error && e.message === 'invite expired') {
       return NextResponse.json({ error: 'invite expired' }, { status: 410 });
     }

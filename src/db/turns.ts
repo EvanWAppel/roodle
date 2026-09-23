@@ -72,6 +72,12 @@ async function loadTurn(db: DB, turnId: string): Promise<Turn> {
   return row;
 }
 
+/** Fetch a single turn, or null if it doesn't exist (for authorization checks). */
+export async function getTurn(db: DB, turnId: string): Promise<Turn | null> {
+  const [row] = await db.select().from(turns).where(eq(turns.id, turnId));
+  return row ?? null;
+}
+
 /**
  * Submit a guess. On a match the turn becomes 'guessed' with 1 point and a
  * resolved time; otherwise it stays awaiting so the guesser can try again.
