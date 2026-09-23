@@ -67,6 +67,66 @@ describe('LetterTiles', () => {
     expect(onComplete).toHaveBeenCalledWith('CAT');
   });
 
+  it('flags a wrong fill against the expected word (GUESS-03)', async () => {
+    const user = userEvent.setup();
+    const onComplete = vi.fn<(guess: string) => void>();
+    // Expected CAT; place X into the first blank — should be flagged wrong.
+    render(
+      <LetterTiles
+        tiles={['T', 'A', 'C', 'X']}
+        length={3}
+        onComplete={onComplete}
+        expected="CAT"
+      />,
+    );
+
+    await user.click(trayTile('X'));
+    // The wrong blank is flagged via data-wrong and surfaced accessibly ("(wrong)").
+    const wrongBlank = screen
+      .getByRole('button', { name: 'X (wrong)' });
+    expect(wrongBlank).toHaveAttribute('data-role', 'blank');
+    expect(wrongBlank).toHaveAttribute('data-wrong', 'true');
+
+    // A correct placement is not flagged.
+    await user.click(trayTile('A'));
+    const okBlank = screen
+      .getAllByRole('button', { name: 'A' })
+      .find((b) => b.getAttribute('data-role') === 'blank')!;
+    expect(okBlank).not.toHaveAttribute('data-wrong');
+  });
+
+  it('pre-places and locks a hinted letter (GUESS-05)', async () => {
+    const user = userEvent.setup();
+    const onComplete = vi.fn<(guess: string) => void>();
+    // Hint: first blank is C, pre-placed and locked.
+    render(
+      <LetterTiles
+        tiles={['T', 'A', 'C', 'X']}
+        length={3}
+        onComplete={onComplete}
+        locked={{ 0: 'C' }}
+      />,
+    );
+
+    // The C tile is consumed by the hint from the start.
+    expect(trayTile('C')).toBeDisabled();
+
+    // The first blank shows C, is locked, and can't be cleared by tapping.
+    const hintBlank = screen
+      .getAllByRole('button', { name: 'C' })
+      .find((b) => b.getAttribute('data-role') === 'blank')!;
+    expect(hintBlank).toHaveAttribute('data-locked', 'true');
+    expect(hintBlank).toBeDisabled();
+    await user.click(hintBlank);
+    expect(trayTile('C')).toBeDisabled(); // still consumed; hint survived
+
+    // Filling the remaining two blanks completes the word including the hint.
+    await user.click(trayTile('A'));
+    await user.click(trayTile('T'));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(onComplete).toHaveBeenCalledWith('CAT');
+  });
+
   it('tracks duplicate letters by tile index so both copies are consumable', async () => {
     const user = userEvent.setup();
     const onComplete = vi.fn<(guess: string) => void>();
