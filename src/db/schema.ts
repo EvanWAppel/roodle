@@ -5,6 +5,7 @@ import {
   integer,
   timestamp,
   jsonb,
+  boolean,
   unique,
 } from 'drizzle-orm/pg-core';
 import type { Drawing } from '@/lib/strokes';
@@ -14,6 +15,8 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
   displayName: text('display_name').notNull(),
+  // NOTIF-05: per-user opt-out for turn-nudge emails. Default on.
+  notifyEnabled: boolean('notify_enabled').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

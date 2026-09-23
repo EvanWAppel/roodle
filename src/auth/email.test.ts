@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { CaptureTransport, ResendTransport } from './email';
+import { CaptureTransport, ConsoleTransport, ResendTransport } from './email';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -66,5 +66,54 @@ describe('email transports', () => {
         url: 'u',
       }),
     ).rejects.toThrow(/Resend send failed: 422/);
+  });
+
+  // NOTIF-02: turn-nudge emails.
+  it('CaptureTransport records nudge sends', async () => {
+    const t = new CaptureTransport();
+    await t.sendNudge({ to: 'guesser@example.com', url: 'https://x/play?turn=t1' });
+    expect(t.sentNudges).toEqual([
+      { to: 'guesser@example.com', url: 'https://x/play?turn=t1' },
+    ]);
+  });
+
+  it('ConsoleTransport.sendNudge does not throw', async () => {
+    await expect(
+      new ConsoleTransport().sendNudge({
+        to: 'guesser@example.com',
+        url: 'https://x/play?turn=t1',
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('ResendTransport sendNudge POSTs to Resend with the recipient + deep link', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => '' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new ResendTransport('re_key', 'Roodle <hi@roodle.app>').sendNudge({
+      to: 'guesser@example.com',
+      url: 'https://roodle/play?turn=abc',
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.resend.com/emails');
+    expect(init.headers.Authorization).toBe('Bearer re_key');
+    const body = JSON.parse(init.body);
+    expect(body.to).toBe('guesser@example.com');
+    expect(body.subject).toMatch(/turn/i);
+    expect(body.html).toContain('https://roodle/play?turn=abc');
+  });
+
+  it('ResendTransport sendNudge throws on a non-ok response (surfaces, not swallowed)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => 'boom' }),
+    );
+    await expect(
+      new ResendTransport('re_key', 'x@y.com').sendNudge({
+        to: 'a@b.com',
+        url: 'u',
+      }),
+    ).rejects.toThrow(/Resend send failed: 500/);
   });
 });
