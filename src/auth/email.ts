@@ -3,15 +3,26 @@ export interface MagicLinkEmail {
   url: string;
 }
 
+/** A friend-invite email — same shape as a magic link (recipient + a link). */
+export interface InviteEmail {
+  to: string;
+  url: string;
+}
+
 export interface EmailTransport {
   sendMagicLink(msg: MagicLinkEmail): Promise<void>;
+  sendInvite(msg: InviteEmail): Promise<void>;
 }
 
 /** Test transport: records what would have been sent. */
 export class CaptureTransport implements EmailTransport {
   readonly sent: MagicLinkEmail[] = [];
+  readonly sentInvites: InviteEmail[] = [];
   async sendMagicLink(msg: MagicLinkEmail): Promise<void> {
     this.sent.push(msg);
+  }
+  async sendInvite(msg: InviteEmail): Promise<void> {
+    this.sentInvites.push(msg);
   }
 }
 
@@ -19,6 +30,9 @@ export class CaptureTransport implements EmailTransport {
 export class ConsoleTransport implements EmailTransport {
   async sendMagicLink(msg: MagicLinkEmail): Promise<void> {
     console.log(`[roodle] magic link for ${msg.to}: ${msg.url}`);
+  }
+  async sendInvite(msg: InviteEmail): Promise<void> {
+    console.log(`[roodle] friend invite for ${msg.to}: ${msg.url}`);
   }
 }
 
@@ -44,6 +58,28 @@ export class ResendTransport implements EmailTransport {
           `<p>Tap to sign in to Roodle:</p>` +
           `<p><a href="${url}">${url}</a></p>` +
           `<p>This link is single-use and expires in 15 minutes.</p>`,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Resend send failed: ${res.status} ${await res.text()}`);
+    }
+  }
+
+  async sendInvite({ to, url }: InviteEmail): Promise<void> {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: this.from,
+        to,
+        subject: 'You’re invited to play Roodle',
+        html:
+          `<p>A friend invited you to draw &amp; guess on Roodle:</p>` +
+          `<p><a href="${url}">${url}</a></p>` +
+          `<p>Tap the link to accept and start playing.</p>`,
       }),
     });
     if (!res.ok) {

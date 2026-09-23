@@ -15,6 +15,13 @@
       "when": 1789947699784,
       "tag": "0001_auth_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790131058901,
+      "tag": "0002_invites_friendships",
+      "breakpoints": true
     }
   ]
 }

@@ -112,3 +112,53 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
   (revocable without touching Wordly) + rate-limiting on `/api/auth/request`
   (4/15min per email, 30/15min per IP). Verified in prod: a real magic link
   delivered (HTTP 200 from Resend). Evan will re-evaluate if it hits the cap.
+
+### D10 — AUTH-06 bundled with GROUP: real sessions + friend-created games together
+- **Date:** 2026-09-22
+- **Status:** ✅ Confirmed by Evan (2026-09-22). Evan chose to bundle GROUP into
+  the AUTH-06 sequential step during the fan-out kickoff.
+- **Chose:** implement AUTH-06 (real magic-link sessions everywhere; delete the
+  dev `PlayerSwitch`, the `/api/session?as=` stub, and the `.local` seed) **in the
+  same sequential step** as GROUP-01..05 (invite + friendship schema/migration,
+  `POST /api/invites` invite-by-email, accept-by-token creating the friendship +
+  game, friend-only enforcement on `POST /api/turns`, invite/friends UI). So the
+  moment the dev switch is gone, the app has **both** real identity and a real
+  opponent/game.
+- **Rejected:** (a) keep the seeded pair as a temporary bridge until GROUP lands;
+  (b) full rip-out with a dead-end "invite a friend" empty state until GROUP lands.
+- **Why:** removing the dev switch leaves `/play` & `/draw` with no opponent/game
+  unless friend-created games exist; building GROUP now keeps the live app
+  continuously playable rather than shipping an interim bridge or an empty state.
+- **Sub-decisions (built as-is, low stakes):** invite tokens hashed with the
+  existing **SHA-256** `hashToken` scheme (matching magic-link tokens; only the
+  hash is stored); **7-day** invite TTL (vs 15-min magic links); `sendInvite`
+  added to the `EmailTransport` interface (distinct subject/copy vs reusing
+  `sendMagicLink`); a minimal `/friends` invite page; `/scores` renders per-friend
+  scoreboards + the user's lifetime stats; a non-production `seedDevFriends`
+  helper retained for local play/tests (throws in prod, not used by any route).
+
+### D11 — Security review adjudication: fix all found authZ holes before merge
+- **Date:** 2026-09-22
+- **Status:** ✅ Confirmed by Evan (2026-09-22) — Evan's adjudication call ("fix all 4").
+- **Chose:** an independent adversarial review of the AUTH-06+GROUP diff found
+  four real authorization holes; Evan chose to fix **all four** on the branch
+  before merge — including two that were **pre-existing** (not introduced by this
+  branch) but now the weak link in the friend-only model:
+  1. `acceptInvite` didn't bind to the invitee's email → a leaked/forwarded invite
+     link let any signed-in user become the inviter's "friend" (**CRITICAL**).
+     Fixed: reject unless the accepting user's normalized email matches the invite.
+  2. Post-login redirect (`safeReturnTo`) allowed an open redirect via backslash /
+     `//` / `/..//evil.com` path-collapse (**HIGH**). Fixed with a two-guard check
+     that re-validates the final redirect origin against the request origin.
+  3. `GET /api/turns` was unauthenticated → anyone could read another user's
+     pending turns *including the secret word* (**MEDIUM**, pre-existing). Fixed:
+     require a session and `caller === guesser`.
+  4. `POST /api/turns/:id/guess` was unauthenticated → anyone could guess / force
+     give-up on any turn (**MEDIUM**, pre-existing). Fixed: require a session and
+     `caller === turn.guesser`.
+- **Rejected:** fixing only the two new-code blockers and deferring the two
+  pre-existing MEDIUM endpoints to follow-up tasks.
+- **Why:** the pre-existing endpoints undermine the very friend-only guarantee
+  this step introduces; closing them now keeps main sound. Two further review
+  rounds verified each fix (incl. a residual open-redirect vector) is closed, with
+  a regression test per finding.

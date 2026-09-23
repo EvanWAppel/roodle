@@ -117,21 +117,25 @@ Replaces the SLICE-03 dev stub with real identity.
   route 401s without session, 200s with.
 - [x] **AUTH-05** Sign-in / sign-out UI + "check your email" state. Test
   (component): submitting an email calls the request endpoint.
-- [ ] **AUTH-06** Swap SLICE-03 stub for real sessions everywhere; delete the dev
-  switch. Test: SLICE E2E still green under real auth.
+- [x] **AUTH-06** Swap SLICE-03 stub for real sessions everywhere; delete the dev
+  switch. Test: SLICE E2E still green under real auth. *(Done with GROUP as one
+  sequential step — see D10. SLICE-12 E2E green under real auth via
+  `createFriendPair`.)*
 
 ## Group GROUP — Invites & friends  ⇄ parallel-safe · depends on SLICE, AUTH
 
-- [ ] **GROUP-01** Schema + migration for `friendship`/`invite` (inviter,
-  invitee_email, token, status). Test: models round-trip.
-- [ ] **GROUP-02** `POST /api/invites` — invite by email, issue invite link.
-  Test: creates a pending invite; duplicate pending invite is rejected.
-- [ ] **GROUP-03** Accept invite on first sign-in → creates the friendship. Test:
-  accepting links the two users; expired/invalid token rejected.
-- [ ] **GROUP-04** Enforce "can only start a game with a friend." Test: creating a
-  turn to a non-friend 403s.
-- [ ] **GROUP-05** Invite + friends-list UI. Test (component): submitting an email
-  posts to `/api/invites`.
+- [x] **GROUP-01** Schema + migration for `friendship`/`invite` (inviter,
+  invitee_email, token, status). Test: models round-trip. *(migration
+  `0002_invites_friendships.sql`; unique pair constraint.)*
+- [x] **GROUP-02** `POST /api/invites` — invite by email, issue invite link.
+  Test: creates a pending invite; duplicate pending invite is rejected (409).
+- [x] **GROUP-03** Accept invite → creates the friendship. Test: accepting links
+  the two users; expired/invalid token rejected; **bound to the invitee's email**
+  (D11) so a leaked link can't hijack the friendship; idempotent.
+- [x] **GROUP-04** Enforce "can only start a game with a friend." Test: creating a
+  turn to a non-friend 403s; drawer taken from the session, game must match pair.
+- [x] **GROUP-05** Invite + friends-list UI (`/friends`). Test (component):
+  submitting an email posts to `/api/invites`.
 
 ## Group DRAW — Drawing tools & fidelity  ⇄ parallel-safe · depends on SLICE
 

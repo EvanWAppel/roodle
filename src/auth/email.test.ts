@@ -29,6 +29,32 @@ describe('email transports', () => {
     expect(body.html).toContain('https://roodle/cb?token=abc');
   });
 
+  it('CaptureTransport records invite sends', async () => {
+    const t = new CaptureTransport();
+    await t.sendInvite({ to: 'x@y.com', url: 'https://x/accept?token=t' });
+    expect(t.sentInvites).toEqual([
+      { to: 'x@y.com', url: 'https://x/accept?token=t' },
+    ]);
+  });
+
+  it('ResendTransport sendInvite POSTs to Resend with the recipient + link', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => '' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new ResendTransport('re_key', 'Roodle <hi@roodle.app>').sendInvite({
+      to: 'friend@example.com',
+      url: 'https://roodle/api/invites/accept?token=abc',
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.resend.com/emails');
+    expect(init.headers.Authorization).toBe('Bearer re_key');
+    const body = JSON.parse(init.body);
+    expect(body.to).toBe('friend@example.com');
+    expect(body.subject).toMatch(/invit/i);
+    expect(body.html).toContain('https://roodle/api/invites/accept?token=abc');
+  });
+
   it('ResendTransport throws on a non-ok response (no silent failure)', async () => {
     vi.stubGlobal(
       'fetch',

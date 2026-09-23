@@ -2,22 +2,24 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { DrawingReplay } from '@/components/DrawingReplay';
 import { LetterTiles } from '@/components/LetterTiles';
 import { buildTileTray } from '@/lib/guess';
 import {
-  fetchSession,
+  fetchAuthSession,
   fetchPending,
   submitGuess,
   giveUp,
-  type SessionInfo,
+  type Person,
+  type FriendInfo,
   type TurnDTO,
 } from '@/lib/api';
-import { PlayerSwitch, type DevPlayer } from '@/components/PlayerSwitch';
 
 export default function PlayPage() {
-  const [as, setAs] = useState<DevPlayer>('christine');
-  const [session, setSession] = useState<SessionInfo | null>(null);
+  const router = useRouter();
+  const [me, setMe] = useState<Person | null>(null);
+  const [friends, setFriends] = useState<FriendInfo[]>([]);
   const [pending, setPending] = useState<TurnDTO[]>([]);
   const [active, setActive] = useState<TurnDTO | null>(null);
   const [result, setResult] = useState<string>('');
@@ -27,13 +29,18 @@ export default function PlayPage() {
   }, []);
 
   useEffect(() => {
-    fetchSession(as).then(async (s) => {
-      setSession(s);
+    fetchAuthSession().then(async (s) => {
+      if (!s.me) {
+        router.replace('/signin');
+        return;
+      }
+      setMe(s.me);
+      setFriends(s.friends);
       setActive(null);
       setResult('');
       await refresh(s.me.id);
     });
-  }, [as, refresh]);
+  }, [router, refresh]);
 
   const tiles = useMemo(
     () => (active ? buildTileTray(active.word) : []),
@@ -46,26 +53,26 @@ export default function PlayPage() {
 
   const onComplete = useCallback(
     async (guess: string) => {
-      if (!active || !session) return;
+      if (!active || !me) return;
       const updated = await submitGuess(active.id, guess);
       if (updated.status === 'guessed') {
         setResult(`Correct! +${updated.pointsAwarded} point 🎉 (it was "${active.word}")`);
         setActive(null);
-        await refresh(session.me.id);
+        await refresh(me.id);
       } else {
         setResult('Not quite — try again.');
       }
     },
-    [active, session, refresh],
+    [active, me, refresh],
   );
 
   const onGiveUp = useCallback(async () => {
-    if (!active || !session) return;
+    if (!active || !me) return;
     const updated = await giveUp(active.id);
     setResult(`The word was "${updated.word}". No points this time.`);
     setActive(null);
-    await refresh(session.me.id);
-  }, [active, session, refresh]);
+    await refresh(me.id);
+  }, [active, me, refresh]);
 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-4 p-6">
@@ -81,11 +88,20 @@ export default function PlayPage() {
         </nav>
       </div>
 
-      <PlayerSwitch value={as} onChange={setAs} />
-      {session && (
+      {me && (
         <p className="text-sm text-gray-500">
-          You are <strong>{session.me.displayName}</strong>.{' '}
-          {pending.length} drawing(s) waiting.
+          You are <strong>{me.displayName}</strong>. {pending.length} drawing(s)
+          waiting.
+        </p>
+      )}
+
+      {me && friends.length === 0 && pending.length === 0 && (
+        <p className="text-sm text-gray-500">
+          You have no friends yet.{' '}
+          <Link href="/friends" className="text-blue-600 underline">
+            Invite a friend
+          </Link>{' '}
+          to start playing.
         </p>
       )}
 
@@ -105,7 +121,7 @@ export default function PlayPage() {
               </button>
             </li>
           ))}
-          {pending.length === 0 && (
+          {pending.length === 0 && friends.length > 0 && (
             <li className="text-sm text-gray-400">Nothing to guess yet.</li>
           )}
         </ul>

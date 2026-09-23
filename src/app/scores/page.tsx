@@ -1,11 +1,15 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getDb } from '@/db/client';
-import { ensureSeed } from '@/db/seed';
+import { getCurrentUser } from '@/auth/currentUser';
+import { listFriendsWithGames } from '@/db/friends';
 import {
   getGameScoreboard,
   getPlayerStats,
   getGameHistory,
   type PlayerStats,
+  type ScoreRow,
+  type HistoryRow,
 } from '@/db/stats';
 
 // Always read fresh at request time (scores change as turns resolve).
@@ -32,14 +36,21 @@ function StatCard({ name, stats }: { name: string; stats: PlayerStats }) {
 }
 
 export default async function ScoresPage() {
+  const me = await getCurrentUser();
+  if (!me) redirect('/signin');
+
   const db = await getDb();
-  const { playerA, playerB, game } = await ensureSeed(db);
-  const [board, statsA, statsB, history] = await Promise.all([
-    getGameScoreboard(db, game.id),
-    getPlayerStats(db, playerA.id),
-    getPlayerStats(db, playerB.id),
-    getGameHistory(db, game.id),
-  ]);
+  const friends = await listFriendsWithGames(db, me.id);
+  const myStats = await getPlayerStats(db, me.id);
+
+  // Per-game scoreboard + history across all the user's games.
+  const games = await Promise.all(
+    friends.map(async (f) => ({
+      opponent: f.opponent,
+      board: await getGameScoreboard(db, f.gameId),
+      history: await getGameHistory(db, f.gameId),
+    })),
+  );
 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-6 p-6">
@@ -57,56 +68,64 @@ export default async function ScoresPage() {
 
       <section>
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Scoreboard
+          Your stats
         </h2>
-        <ol className="flex flex-col gap-1">
-          {board.map((row, i) => (
-            <li
-              key={row.playerId}
-              className="flex items-center justify-between rounded border px-3 py-2"
-            >
-              <span>
-                {i === 0 && board.length > 1 && row.points > 0 ? '👑 ' : ''}
-                {row.displayName}
-              </span>
-              <span className="font-semibold">
-                {row.points} pt{row.points === 1 ? '' : 's'}
-              </span>
-            </li>
-          ))}
-        </ol>
+        <StatCard name={me.displayName} stats={myStats} />
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2">
-        <StatCard name={playerA.displayName} stats={statsA} />
-        <StatCard name={playerB.displayName} stats={statsB} />
-      </section>
+      {friends.length === 0 && (
+        <p className="text-sm text-gray-500">
+          No games yet.{' '}
+          <Link href="/friends" className="text-blue-600 underline">
+            Invite a friend
+          </Link>{' '}
+          to start playing.
+        </p>
+      )}
 
-      <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Recent rounds
-        </h2>
-        <ul className="flex flex-col gap-1 text-sm">
-          {history.length === 0 && (
-            <li className="text-gray-400">No rounds finished yet.</li>
-          )}
-          {history.map((h) => (
-            <li
-              key={h.turnId}
-              className="flex items-center justify-between rounded border px-3 py-2"
-            >
-              <span>
-                <strong>{h.guesserName}</strong>{' '}
-                {h.status === 'guessed' ? 'guessed' : 'gave up on'}{' '}
-                <span className="font-mono">&ldquo;{h.word}&rdquo;</span>
-              </span>
-              <span>
-                {h.status === 'guessed' ? `+${h.pointsAwarded} 🎉` : '—'}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {games.map(({ opponent, board, history }) => (
+        <section key={opponent.id} className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+            vs {opponent.displayName}
+          </h2>
+          <ol className="flex flex-col gap-1">
+            {board.map((row: ScoreRow, i) => (
+              <li
+                key={row.playerId}
+                className="flex items-center justify-between rounded border px-3 py-2"
+              >
+                <span>
+                  {i === 0 && board.length > 1 && row.points > 0 ? '👑 ' : ''}
+                  {row.displayName}
+                </span>
+                <span className="font-semibold">
+                  {row.points} pt{row.points === 1 ? '' : 's'}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <ul className="flex flex-col gap-1 text-sm">
+            {history.length === 0 && (
+              <li className="text-gray-400">No rounds finished yet.</li>
+            )}
+            {history.map((h: HistoryRow) => (
+              <li
+                key={h.turnId}
+                className="flex items-center justify-between rounded border px-3 py-2"
+              >
+                <span>
+                  <strong>{h.guesserName}</strong>{' '}
+                  {h.status === 'guessed' ? 'guessed' : 'gave up on'}{' '}
+                  <span className="font-mono">&ldquo;{h.word}&rdquo;</span>
+                </span>
+                <span>
+                  {h.status === 'guessed' ? `+${h.pointsAwarded} 🎉` : '—'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </main>
   );
 }
