@@ -5,6 +5,7 @@ import {
   integer,
   timestamp,
   jsonb,
+  unique,
 } from 'drizzle-orm/pg-core';
 import type { Drawing } from '@/lib/strokes';
 
@@ -60,7 +61,49 @@ export const authTokens = pgTable('auth_tokens', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+export type InviteStatus = 'pending' | 'accepted' | 'expired';
+
+/**
+ * A friend invitation addressed to an email. Only the token hash is stored
+ * (same scheme as magic-link tokens); the raw token lives only in the emailed
+ * link. Accepting one creates a friendship + game between the two users.
+ */
+export const invites = pgTable('invites', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  inviterId: uuid('inviter_id')
+    .notNull()
+    .references(() => users.id),
+  inviteeEmail: text('invitee_email').notNull(),
+  tokenHash: text('token_hash').notNull(),
+  status: text('status').notNull().$type<InviteStatus>().default('pending'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  expiresAt: timestamp('expires_at').notNull(),
+  acceptedByUserId: uuid('accepted_by_user_id').references(() => users.id),
+});
+
+/**
+ * A symmetric friendship between two users. Stored once per pair with a
+ * canonical ordering (userAId < userBId as strings), enforced unique so a
+ * pair can't be duplicated in either order.
+ */
+export const friendships = pgTable(
+  'friendships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userAId: uuid('user_a_id')
+      .notNull()
+      .references(() => users.id),
+    userBId: uuid('user_b_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [unique('friendships_pair_unique').on(t.userAId, t.userBId)],
+);
+
 export type User = typeof users.$inferSelect;
+export type Invite = typeof invites.$inferSelect;
+export type Friendship = typeof friendships.$inferSelect;
 export type AuthToken = typeof authTokens.$inferSelect;
 export type Game = typeof games.$inferSelect;
 export type Turn = typeof turns.$inferSelect;
