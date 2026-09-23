@@ -91,14 +91,24 @@ describe('auth routes (AUTH-02/03 wiring)', () => {
     expect(cbRes.headers.get('location')).toMatch(/\/$/);
   });
 
-  it.each(['/\\evil.com', '/\\/evil.com', '\\\\evil.com', '/%2F%2Fevil.com'])(
-    'does not redirect off-origin for backslash/encoded trick %s',
-    async (evil) => {
+  // A fresh email per case keeps each request under the per-email rate limit.
+  it.each([
+    ['/\\evil.com', 'redir1@example.com'],
+    ['/\\/evil.com', 'redir2@example.com'],
+    ['\\\\evil.com', 'redir3@example.com'],
+    ['/%2F%2Fevil.com', 'redir4@example.com'],
+    ['/..//evil.com', 'redir5@example.com'],
+    ['/foo/..//evil.com', 'redir6@example.com'],
+    ['/./..//evil.com', 'redir7@example.com'],
+    ['//evil.com', 'redir8@example.com'],
+  ])(
+    'does not redirect off-origin for open-redirect trick %s',
+    async (evil, email) => {
       const reqRes = await requestRoute(
         new Request('http://test/api/auth/request', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ email: 'friend3@example.com' }),
+          body: JSON.stringify({ email }),
         }),
       );
       const { devLink } = (await reqRes.json()) as { devLink: string };
