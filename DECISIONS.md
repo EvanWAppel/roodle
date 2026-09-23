@@ -27,7 +27,7 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
 
 ### D3 — Local-first data layer: Drizzle ORM + PGlite (dev/test), Neon (prod)
 - **Date:** 2026-09-20
-- **Status:** 🟡 Proposed by orchestrator — pending Evan confirm (low stakes).
+- **Status:** ✅ Confirmed by Evan (2026-09-22).
 - **Chose:** Drizzle ORM with **PGlite** (in-process WASM Postgres) for local
   development and tests; the same Drizzle schema targets Neon Postgres in prod.
 - **Rejected:** (a) SQLite locally — diverges from Postgres (JSON, types) and
@@ -39,7 +39,7 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
 
 ### D4 — Test stack: Vitest + Testing Library
 - **Date:** 2026-09-20
-- **Status:** 🟡 Proposed by orchestrator — pending Evan confirm (low stakes).
+- **Status:** ✅ Confirmed by Evan (2026-09-22).
 - **Chose:** Vitest as the test runner with @testing-library/react + jsdom.
 - **Rejected:** Jest (heavier config with ESM/Next 16), Playwright-only.
 - **Why:** fast, ESM-native, minimal config; TDD-friendly watch mode. Matches the
@@ -47,7 +47,7 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
 
 ### D5 — Scoring: flat 1 point per correct guess (for now)
 - **Date:** 2026-09-20
-- **Status:** 🟡 Proposed — pending Evan confirm (PRD OQ3).
+- **Status:** ✅ Confirmed by Evan (2026-09-22). Revisit once WORD packs add difficulty.
 - **Chose:** a correct guess awards a flat **1 point**; stats derive from turn
   outcomes (points, correct guesses, streaks) rather than a stored score.
 - **Rejected:** difficulty- or speed-scaled points.
@@ -57,7 +57,7 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
 
 ### D6 — Single dev DB instance pinned on globalThis
 - **Date:** 2026-09-20
-- **Status:** ✅ Adopted (forced by a runtime 500 on `/scores`).
+- **Status:** ✅ Confirmed by Evan (2026-09-22); adopted after a runtime 500 on `/scores`.
 - **Chose:** cache the PGlite/Drizzle promise on `globalThis.__roodleDb`.
 - **Rejected:** a plain module-level singleton.
 - **Why:** in Next dev, Server Components (react-server condition) and Route
