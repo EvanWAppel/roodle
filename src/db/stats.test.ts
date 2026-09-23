@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createTestDb } from './testDb';
 import type { DB } from './client';
-import { ensureSeed } from './seed';
+import { createFriendPair } from './friends';
 import { createTurn, submitGuess, giveUp } from './turns';
 import type { Drawing } from '@/lib/strokes';
 import { getGameScoreboard, getPlayerStats, getGameHistory } from './stats';
@@ -39,10 +39,15 @@ describe('stats (SCORE group)', () => {
 
   beforeEach(async () => {
     db = await createTestDb();
-    const seed = await ensureSeed(db);
-    a = seed.playerA.id;
-    b = seed.playerB.id;
-    gameId = seed.game.id;
+    const pair = await createFriendPair(db, {
+      emailA: 'evan@example.com',
+      emailB: 'christine@example.com',
+      displayA: 'Evan',
+      displayB: 'Christine',
+    });
+    a = pair.userA.id;
+    b = pair.userB.id;
+    gameId = pair.game.id;
   });
 
   it('scoreboard sums points and correct guesses per player, high first', async () => {

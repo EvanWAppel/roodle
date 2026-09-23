@@ -8,6 +8,7 @@ import {
   ensureFriendship,
   ensureGameForPair,
   createFriendPair,
+  listFriendsWithGames,
 } from './friends';
 
 async function makeUser(db: DB, email: string, displayName: string) {
@@ -67,5 +68,26 @@ describe('friends helpers (GROUP-03 / AUTH-06)', () => {
       .from(games)
       .where(eq(games.id, game.id));
     expect(gameRow).toBeTruthy();
+  });
+
+  it('listFriendsWithGames returns each friend + shared game for a user', async () => {
+    const me = await makeUser(db, 'me@example.com', 'Me');
+    const f1 = await makeUser(db, 'f1@example.com', 'F1');
+    const f2 = await makeUser(db, 'f2@example.com', 'F2');
+    const stranger = await makeUser(db, 's@example.com', 'S');
+
+    await ensureFriendship(db, me.id, f1.id);
+    const g1 = await ensureGameForPair(db, me.id, f1.id);
+    await ensureFriendship(db, me.id, f2.id);
+    const g2 = await ensureGameForPair(db, me.id, f2.id);
+    // A friendship not involving me — must not appear.
+    await ensureFriendship(db, f1.id, stranger.id);
+
+    const friends = await listFriendsWithGames(db, me.id);
+    expect(friends).toHaveLength(2);
+    const byOpponent = new Map(friends.map((x) => [x.opponent.id, x.gameId]));
+    expect(byOpponent.get(f1.id)).toBe(g1.id);
+    expect(byOpponent.get(f2.id)).toBe(g2.id);
+    expect(byOpponent.has(stranger.id)).toBe(false);
   });
 });

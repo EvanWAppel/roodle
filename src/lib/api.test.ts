@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
-  fetchSession,
+  fetchAuthSession,
   submitTurn,
   fetchPending,
   submitGuess,
@@ -20,17 +20,16 @@ function mockFetch(body: unknown, ok = true, status = 200) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('client api helpers', () => {
-  it('fetchSession hits the session route with the actor', async () => {
-    const fn = mockFetch({ me: { id: '1' } });
-    await fetchSession('christine');
-    expect(fn).toHaveBeenCalledWith('/api/session?as=christine');
+  it('fetchAuthSession hits the real-auth session route', async () => {
+    const fn = mockFetch({ me: { id: '1' }, friends: [] });
+    await fetchAuthSession();
+    expect(fn).toHaveBeenCalledWith('/api/auth/session');
   });
 
   it('submitTurn POSTs the drawing payload', async () => {
     const fn = mockFetch({ id: 't1' });
     await submitTurn({
       gameId: 'g',
-      drawerId: 'a',
       guesserId: 'b',
       word: 'cat',
       strokes: [],

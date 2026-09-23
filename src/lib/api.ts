@@ -1,9 +1,19 @@
 import type { Drawing } from './strokes';
 
-export interface SessionInfo {
-  me: { id: string; displayName: string };
-  opponent: { id: string; displayName: string };
+export interface Person {
+  id: string;
+  displayName: string;
+}
+
+export interface FriendInfo {
+  opponent: Person;
   gameId: string;
+}
+
+/** Shape of GET /api/auth/session. `me` is null when signed out. */
+export interface AuthSession {
+  me: Person | null;
+  friends: FriendInfo[];
 }
 
 export interface TurnDTO {
@@ -22,13 +32,12 @@ async function json<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function fetchSession(as: string): Promise<SessionInfo> {
-  return fetch(`/api/session?as=${encodeURIComponent(as)}`).then(json<SessionInfo>);
+export function fetchAuthSession(): Promise<AuthSession> {
+  return fetch('/api/auth/session').then(json<AuthSession>);
 }
 
 export function submitTurn(input: {
   gameId: string;
-  drawerId: string;
   guesserId: string;
   word: string;
   strokes: Drawing;

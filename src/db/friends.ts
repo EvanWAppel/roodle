@@ -91,6 +91,43 @@ export async function ensureGameForPair(
   return created;
 }
 
+export interface FriendWithGame {
+  opponent: User;
+  gameId: string;
+}
+
+/**
+ * Every accepted friend of a user, paired with the game they share. A friend
+ * without a game yet is omitted (there is always a game after acceptInvite, but
+ * be defensive rather than invent one here).
+ */
+export async function listFriendsWithGames(
+  db: DB,
+  userId: string,
+): Promise<FriendWithGame[]> {
+  const rows = await db
+    .select()
+    .from(friendships)
+    .where(
+      or(eq(friendships.userAId, userId), eq(friendships.userBId, userId)),
+    );
+
+  const out: FriendWithGame[] = [];
+  for (const f of rows) {
+    const otherId = f.userAId === userId ? f.userBId : f.userAId;
+    const [opponent] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, otherId))
+      .limit(1);
+    if (!opponent) continue;
+    const game = await findGameForPair(db, userId, otherId);
+    if (!game) continue;
+    out.push({ opponent, gameId: game.id });
+  }
+  return out;
+}
+
 async function ensureUser(
   db: DB,
   email: string,
