@@ -42,14 +42,26 @@ export default function PlayPage() {
     });
   }, [router, refresh]);
 
+  const [hintCount, setHintCount] = useState(0);
+
   const tiles = useMemo(
     () => (active ? buildTileTray(active.word) : []),
     [active],
   );
-  const blanks = useMemo(
-    () => (active ? active.word.replace(/\s+/g, '').length : 0),
+  const answer = useMemo(
+    () => (active ? active.word.toUpperCase().replace(/\s+/g, '') : ''),
     [active],
   );
+  const blanks = answer.length;
+
+  // GUESS-05 hint: reveal the first `hintCount` letters, pre-placed and locked.
+  const locked = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (let i = 0; i < hintCount && i < answer.length; i++) {
+      map[i] = answer[i];
+    }
+    return map;
+  }, [answer, hintCount]);
 
   const onComplete = useCallback(
     async (guess: string) => {
@@ -115,6 +127,7 @@ export default function PlayPage() {
                 onClick={() => {
                   setActive(t);
                   setResult('');
+                  setHintCount(0);
                 }}
               >
                 A drawing to guess ({t.word.replace(/\s+/g, '').length} letters)
@@ -131,18 +144,30 @@ export default function PlayPage() {
         <div className="flex flex-col gap-3">
           <DrawingReplay drawing={active.strokes} />
           <LetterTiles
-            key={active.id}
+            key={`${active.id}:${hintCount}`}
             tiles={tiles}
             length={blanks}
             onComplete={onComplete}
+            expected={answer}
+            locked={locked}
           />
-          <button
-            type="button"
-            onClick={onGiveUp}
-            className="self-start rounded border px-3 py-1 text-sm text-gray-600"
-          >
-            Give up / reveal
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setHintCount((n) => Math.min(n + 1, blanks - 1))}
+              disabled={hintCount >= blanks - 1}
+              className="self-start rounded border px-3 py-1 text-sm text-gray-600 disabled:opacity-50"
+            >
+              Hint ({hintCount} shown)
+            </button>
+            <button
+              type="button"
+              onClick={onGiveUp}
+              className="self-start rounded border px-3 py-1 text-sm text-gray-600"
+            >
+              Give up / reveal
+            </button>
+          </div>
         </div>
       )}
 
