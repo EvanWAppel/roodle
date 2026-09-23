@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect } from 'vitest';
 import type { Drawing } from '@/lib/strokes';
 import { DrawingReplay, orderedPoints } from './DrawingReplay';
@@ -56,7 +57,21 @@ describe('DrawingReplay', () => {
     expect(screen.getByRole('button', { name: /replay/i })).toBeInTheDocument();
   });
 
+  it('renders replay-again and jump-to-final controls (GUESS-01)', () => {
+    render(<DrawingReplay drawing={drawing} />);
+    expect(screen.getByRole('button', { name: /replay/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /show final/i })).toBeInTheDocument();
+  });
+
   it('does not throw when the canvas 2d context is null (jsdom)', () => {
     expect(() => render(<DrawingReplay drawing={drawing} />)).not.toThrow();
+  });
+
+  it('replay-again and show-final are clickable without throwing (jsdom null ctx)', async () => {
+    const user = userEvent.setup();
+    render(<DrawingReplay drawing={drawing} />);
+    await user.click(screen.getByRole('button', { name: /show final/i }));
+    await user.click(screen.getByRole('button', { name: /replay/i }));
+    expect(screen.getByRole('button', { name: /replay/i })).toBeInTheDocument();
   });
 });
