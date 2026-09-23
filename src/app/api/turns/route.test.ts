@@ -89,6 +89,38 @@ describe('SLICE-12 end-to-end: draw → pending → guess → point (friend-enfo
     expect(after.map((t) => t.id)).not.toContain(created.id);
   });
 
+  it('give-up reveals the word and records gave_up (GUESS-04)', async () => {
+    const created = (await (
+      await createTurnRoute(
+        post('http://test/api/turns', {
+          gameId,
+          guesserId: playerB,
+          word: 'cat',
+          strokes: someStrokes,
+        }),
+      )
+    ).json()) as Turn;
+
+    // B is the guesser and gives up on their own turn.
+    currentUser.mockResolvedValue(userB);
+    const giveUpRes = await guessRoute(
+      post(`http://test/api/turns/${created.id}/guess`, { action: 'give_up' }),
+      { params: Promise.resolve({ id: created.id }) },
+    );
+    expect(giveUpRes.status).toBe(200);
+    const revealed = (await giveUpRes.json()) as Turn;
+    expect(revealed.status).toBe('gave_up');
+    expect(revealed.pointsAwarded).toBe(0);
+    expect(revealed.word).toBe('cat'); // the word is revealed to the guesser
+
+    // The turn is resolved and drops out of B's pending queue.
+    const afterRes = await listTurnsRoute(
+      new Request(`http://test/api/turns?for=${playerB}`),
+    );
+    const after = (await afterRes.json()) as Turn[];
+    expect(after.map((t) => t.id)).not.toContain(created.id);
+  });
+
   it('rejects an invalid payload with 400', async () => {
     const res = await createTurnRoute(
       post('http://test/api/turns', { gameId }),
