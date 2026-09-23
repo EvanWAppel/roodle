@@ -115,8 +115,8 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
 
 ### D10 — AUTH-06 bundled with GROUP: real sessions + friend-created games together
 - **Date:** 2026-09-22
-- **Status:** 🟡 Proposed — pending Evan confirm (Evan chose to bundle GROUP into
-  the AUTH-06 sequential step during the fan-out kickoff).
+- **Status:** ✅ Confirmed by Evan (2026-09-22). Evan chose to bundle GROUP into
+  the AUTH-06 sequential step during the fan-out kickoff.
 - **Chose:** implement AUTH-06 (real magic-link sessions everywhere; delete the
   dev `PlayerSwitch`, the `/api/session?as=` stub, and the `.local` seed) **in the
   same sequential step** as GROUP-01..05 (invite + friendship schema/migration,
@@ -139,7 +139,7 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
 
 ### D11 — Security review adjudication: fix all found authZ holes before merge
 - **Date:** 2026-09-22
-- **Status:** 🟡 Proposed — reflects Evan's adjudication call ("fix all 4").
+- **Status:** ✅ Confirmed by Evan (2026-09-22) — Evan's adjudication call ("fix all 4").
 - **Chose:** an independent adversarial review of the AUTH-06+GROUP diff found
   four real authorization holes; Evan chose to fix **all four** on the branch
   before merge — including two that were **pre-existing** (not introduced by this
