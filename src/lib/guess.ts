@@ -38,3 +38,23 @@ export function buildTileTray(
   }
   return tray;
 }
+
+/**
+ * True when `word` can be spelled from `tray` — every letter of the word
+ * (uppercased, spaces dropped) has a distinct tile available, counting
+ * duplicates. Guarantees a decoy-laden tray is still solvable.
+ */
+export function isTraySolvable(word: string, tray: string[]): boolean {
+  const need = new Map<string, number>();
+  for (const ch of word.toUpperCase().replace(/\s+/g, '')) {
+    need.set(ch, (need.get(ch) ?? 0) + 1);
+  }
+  const have = new Map<string, number>();
+  for (const ch of tray) {
+    have.set(ch, (have.get(ch) ?? 0) + 1);
+  }
+  for (const [ch, count] of need) {
+    if ((have.get(ch) ?? 0) < count) return false;
+  }
+  return true;
+}
