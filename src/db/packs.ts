@@ -4,12 +4,13 @@
  * Word selection for a game honors which packs are enabled and the chosen
  * difficulty. Errors are surfaced, never swallowed.
  */
-import { and, eq } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import type { DB } from './client';
 import {
   packs,
   words,
   gamePacks,
+  games,
   type Pack,
   type Word,
   type Difficulty,
@@ -111,21 +112,42 @@ export async function setPackEnabled(
 }
 
 /**
- * Words offered for a game at a difficulty (WORD-03/05): words from packs that
- * are not disabled for the game, at the given difficulty. A pack is enabled by
- * default (see disabledPackIdsForGame). Returns the plain word strings, deduped
- * and sorted for deterministic output.
+ * Words offered for a game at a difficulty (WORD-03/05): words from packs
+ * VISIBLE to this game — built-in packs plus custom packs owned by one of the
+ * game's two players — at the given difficulty, minus any pack disabled for the
+ * game. A stranger's private custom pack is never a draw candidate (this mirrors
+ * the visibility scoping in listPacksForGame; the draw path must not be broader
+ * than what the players can see/manage). Returns deduped, sorted word strings.
  */
 export async function candidateWordsForGame(
   db: DB,
   gameId: string,
   difficulty: Difficulty,
 ): Promise<string[]> {
+  const [game] = await db
+    .select({ playerA: games.playerA, playerB: games.playerB })
+    .from(games)
+    .where(eq(games.id, gameId))
+    .limit(1);
+  if (!game) return [];
+
   const disabled = await disabledPackIdsForGame(db, gameId);
+  // Join words → packs so we can restrict to packs visible to this game:
+  // built-in, or owned by either participant.
   const rows = await db
-    .select()
+    .select({ text: words.text, packId: words.packId })
     .from(words)
-    .where(eq(words.difficulty, difficulty));
+    .innerJoin(packs, eq(packs.id, words.packId))
+    .where(
+      and(
+        eq(words.difficulty, difficulty),
+        or(
+          eq(packs.isBuiltin, true),
+          eq(packs.ownerId, game.playerA),
+          eq(packs.ownerId, game.playerB),
+        ),
+      ),
+    );
 
   const uniq = Array.from(
     new Set(rows.filter((r) => !disabled.has(r.packId)).map((r) => r.text)),

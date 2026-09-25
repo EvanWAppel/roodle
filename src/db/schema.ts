@@ -129,10 +129,10 @@ export const words = pgTable('words', {
 });
 
 /**
- * Which packs are enabled for a game (WORD-05). Absence of any row for a game
- * means "all packs enabled" (the default); once a row exists, only the enabled
- * packs are drawn from. Enabled is stored explicitly so a pack can be toggled
- * off without deleting the association.
+ * Which packs are enabled for a game (WORD-05). A pack is enabled by default; a
+ * row with enabled=false disables THAT ONE pack for the game (a "disabled set,"
+ * not an allowlist), so toggling one pack off leaves all the others on. Enabled
+ * is stored explicitly so a pack can be toggled off without deleting the row.
  */
 export const gamePacks = pgTable(
   'game_packs',

@@ -161,6 +161,55 @@ describe('packs data layer (WORD-01/03/05)', () => {
     });
   });
 
+  describe('visibility: a stranger’s private custom pack never leaks into a game', () => {
+    it('excludes a non-participant’s custom pack from candidates and picks', async () => {
+      const { game } = await createFriendPair(db, {
+        emailA: 'a@example.com',
+        emailB: 'b@example.com',
+        displayA: 'A',
+        displayB: 'B',
+      });
+      // A built-in pack the game can see.
+      await createPack(db, {
+        name: 'Builtin',
+        ownerId: null,
+        isBuiltin: true,
+        words: [{ text: 'visible', difficulty: 'easy' }],
+      });
+      // A stranger (not in this game) with a PRIVATE custom pack.
+      const stranger = await makeUser(db, 'stranger@example.com', 'Stranger');
+      await createPack(db, {
+        name: 'Strangers Secret',
+        ownerId: stranger.id,
+        isBuiltin: false,
+        words: [{ text: 'secret', difficulty: 'easy' }],
+      });
+
+      const candidates = await candidateWordsForGame(db, game.id, 'easy');
+      expect(candidates).toEqual(['visible']);
+      expect(candidates).not.toContain('secret');
+      for (let i = 0; i < 30; i++) {
+        expect(await pickWordForGame(db, game.id, 'easy')).toBe('visible');
+      }
+    });
+
+    it('includes a participant’s OWN custom pack', async () => {
+      const { userA, game } = await createFriendPair(db, {
+        emailA: 'a@example.com',
+        emailB: 'b@example.com',
+        displayA: 'A',
+        displayB: 'B',
+      });
+      await createPack(db, {
+        name: 'A’s pack',
+        ownerId: userA.id,
+        isBuiltin: false,
+        words: [{ text: 'mine', difficulty: 'easy' }],
+      });
+      expect(await candidateWordsForGame(db, game.id, 'easy')).toContain('mine');
+    });
+  });
+
   describe('WORD-05: disabled packs are never offered', () => {
     it('a disabled pack contributes no candidate words and is never picked', async () => {
       const { game } = await createFriendPair(db, {
