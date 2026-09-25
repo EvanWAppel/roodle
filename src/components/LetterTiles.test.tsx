@@ -127,6 +127,49 @@ describe('LetterTiles', () => {
     expect(onComplete).toHaveBeenCalledWith('CAT');
   });
 
+  it('preserves in-progress placements when a hint arrives (locked grows)', async () => {
+    const user = userEvent.setup();
+    const onComplete = vi.fn<(guess: string) => void>();
+    // Same stable component instance; the parent grows `locked` on a hint
+    // WITHOUT remounting (no key change). Word CAT.
+    const { rerender } = render(
+      <LetterTiles
+        tiles={['C', 'A', 'T', 'X']}
+        length={3}
+        onComplete={onComplete}
+        locked={{}}
+      />,
+    );
+
+    // Player fills blank 0 with X (wrong), then blank 1 with A (left-to-right).
+    await user.click(trayTile('X'));
+    await user.click(trayTile('A'));
+    expect(trayTile('X')).toBeDisabled();
+    expect(trayTile('A')).toBeDisabled();
+
+    // A hint now reveals the first letter (C), locked — no remount.
+    rerender(
+      <LetterTiles
+        tiles={['C', 'A', 'T', 'X']}
+        length={3}
+        onComplete={onComplete}
+        locked={{ 0: 'C' }}
+      />,
+    );
+
+    // The hint replaces the wrong X in blank 0 (X returns to tray), the player's
+    // A in blank 1 is RETAINED (the pre-fix remount would have wiped it), and C
+    // is consumed by the hint.
+    expect(trayTile('C')).toBeDisabled();
+    expect(trayTile('A')).toBeDisabled();
+    expect(trayTile('X')).not.toBeDisabled();
+
+    // Completing the last blank (T) yields CAT — hint + preserved input + new tile.
+    await user.click(trayTile('T'));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(onComplete).toHaveBeenCalledWith('CAT');
+  });
+
   it('tracks duplicate letters by tile index so both copies are consumable', async () => {
     const user = userEvent.setup();
     const onComplete = vi.fn<(guess: string) => void>();

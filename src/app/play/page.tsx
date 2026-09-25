@@ -144,7 +144,7 @@ export default function PlayPage() {
         <div className="flex flex-col gap-3">
           <DrawingReplay drawing={active.strokes} />
           <LetterTiles
-            key={`${active.id}:${hintCount}`}
+            key={active.id}
             tiles={tiles}
             length={blanks}
             onComplete={onComplete}

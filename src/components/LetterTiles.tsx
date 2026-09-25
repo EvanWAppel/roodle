@@ -25,6 +25,37 @@ export interface LetterTilesProps {
 }
 
 /**
+ * Merge hint letters into existing blank assignments, preserving the player's
+ * placements. Each locked blank takes a matching, unused tray tile; a tile the
+ * player had placed there (e.g. a wrong guess) is replaced and freed. Pure.
+ */
+function mergeLockedHints(
+  prev: (number | null)[],
+  locked: Record<number, string> | undefined,
+  tiles: string[],
+  length: number,
+): (number | null)[] {
+  const next = prev.slice();
+  let changed = false;
+  for (const [key, letterRaw] of Object.entries(locked ?? {})) {
+    const slotIndex = Number(key);
+    if (slotIndex < 0 || slotIndex >= length) continue;
+    const letter = letterRaw.toUpperCase();
+    const cur = next[slotIndex];
+    if (cur !== null && tiles[cur] === letter) continue; // already correct
+    const taken = new Set<number>();
+    next.forEach((s, i) => {
+      if (s !== null && i !== slotIndex) taken.add(s);
+    });
+    const tileIndex = tiles.findIndex((t, i) => t === letter && !taken.has(i));
+    if (tileIndex === -1) continue;
+    next[slotIndex] = tileIndex;
+    changed = true;
+  }
+  return changed ? next : prev;
+}
+
+/**
  * Draw Something-style guessing input: a row of blanks and a tray of tappable
  * letter tiles. Tapping a tray tile fills the next empty (unlocked) blank and
  * consumes that specific tile (tracked by index so duplicate letters work).
@@ -63,6 +94,17 @@ export function LetterTiles({
 
   // Each blank holds the tray index of the tile placed in it, or null.
   const [slots, setSlots] = useState<(number | null)[]>(initialSlots);
+
+  // When new hints arrive (the `locked` map grows mid-turn), merge them into the
+  // current slots WITHOUT discarding the player's in-progress placements. This
+  // uses React's "adjust state when a prop changes" render-phase pattern (not an
+  // effect, so no cascading commit): it runs only when `locked`'s identity
+  // changes, which the parent does solely on a new hint.
+  const [prevLocked, setPrevLocked] = useState(locked);
+  if (locked !== prevLocked) {
+    setPrevLocked(locked);
+    setSlots((prev) => mergeLockedHints(prev, locked, tiles, length));
+  }
 
   const usedTileIndexes = new Set(slots.filter((s): s is number => s !== null));
 
