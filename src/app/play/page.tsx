@@ -39,6 +39,7 @@ export default function PlayPage() {
       setFriends(s.friends);
       setActive(null);
       setResult('');
+      setWrong(false);
       await refresh(s.me.id);
     });
   }, [router, refresh]);
@@ -80,6 +81,7 @@ export default function PlayPage() {
     const updated = await giveUp(active.id);
     setResult(`The word was "${updated.word}". No points this time.`);
     setActive(null);
+    setWrong(false);
     await refresh(me.id);
   }, [active, me, refresh]);
 
