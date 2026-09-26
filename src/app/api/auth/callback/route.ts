@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/db/client';
+import { resolveBaseUrl } from '@/lib/baseUrl';
 import { consumeMagicLink } from '@/auth/service';
 import {
   SESSION_COOKIE,
@@ -20,7 +21,7 @@ import {
  *     would otherwise smuggle through, so we validate the value we actually
  *     redirect to, not just the input.
  */
-function safeReturnTo(value: string | undefined, req: Request): URL | null {
+function safeReturnTo(value: string | undefined, base: string): URL | null {
   if (!value) return null;
   if (!value.startsWith('/')) return null;
   const PLACEHOLDER = 'http://placeholder.invalid';
@@ -33,10 +34,12 @@ function safeReturnTo(value: string | undefined, req: Request): URL | null {
   if (resolved.origin !== PLACEHOLDER) return null;
 
   const path = resolved.pathname + resolved.search + resolved.hash;
-  const appOrigin = new URL(req.url).origin;
+  // Validate + rebuild against the canonical base so the final redirect lands on
+  // the real public host (behind a proxy req.url is an unreachable localhost).
+  const appOrigin = new URL(base).origin;
   let dest: URL;
   try {
-    dest = new URL(path, req.url);
+    dest = new URL(path, base);
   } catch {
     return null;
   }
@@ -46,6 +49,7 @@ function safeReturnTo(value: string | undefined, req: Request): URL | null {
 
 /** GET /api/auth/callback?token=… — verify the link, start a session (AUTH-03). */
 export async function GET(req: Request) {
+  const base = resolveBaseUrl(req);
   const token = new URL(req.url).searchParams.get('token');
   if (!token) {
     return NextResponse.json({ error: 'missing token' }, { status: 400 });
@@ -60,7 +64,7 @@ export async function GET(req: Request) {
   } catch (e) {
     // Expected link failures bounce to sign-in; anything else propagates.
     if (e instanceof Error && AUTH_FAILURES.includes(e.message)) {
-      return NextResponse.redirect(new URL('/signin?error=link', req.url));
+      return NextResponse.redirect(new URL('/signin?error=link', base));
     }
     throw e;
   }
@@ -72,10 +76,10 @@ export async function GET(req: Request) {
     ?.match(new RegExp(`${POST_LOGIN_COOKIE}=([^;]+)`))?.[1];
   const returnTo = safeReturnTo(
     rawReturn ? decodeURIComponent(rawReturn) : undefined,
-    req,
+    base,
   );
 
-  const res = NextResponse.redirect(returnTo ?? new URL('/', req.url));
+  const res = NextResponse.redirect(returnTo ?? new URL('/', base));
   res.cookies.set(SESSION_COOKIE, createSessionToken(userId), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

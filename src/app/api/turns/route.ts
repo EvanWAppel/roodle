@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/db/client';
+import { resolveBaseUrl } from '@/lib/baseUrl';
 import { getCurrentUser } from '@/auth/currentUser';
 import { createTurn, listPendingTurnsFor } from '@/db/turns';
 import { areFriends, findGameForPair } from '@/db/friends';
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
   // real turn. Per project rules we don't swallow it silently: the failure is
   // surfaced via console.error (observable in server logs) while the 201 for
   // the successfully-created turn still returns. See DECISIONS D-NOTIF-01.
-  const base = process.env.APP_URL ?? new URL(req.url).origin;
+  const base = resolveBaseUrl(req);
   try {
     await nudgeGuesser(db, turn, base);
   } catch (err) {

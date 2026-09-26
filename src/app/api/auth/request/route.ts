@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/db/client';
+import { resolveBaseUrl } from '@/lib/baseUrl';
 import { requestMagicLink } from '@/auth/service';
 import { defaultTransport } from '@/auth/email';
 import { RateLimiter } from '@/auth/rateLimit';
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
     throw e;
   }
 
-  const base = process.env.APP_URL ?? new URL(req.url).origin;
+  const base = resolveBaseUrl(req);
   const url = `${base}/api/auth/callback?token=${token}`;
   await defaultTransport().sendMagicLink({ to: body.email, url });
 

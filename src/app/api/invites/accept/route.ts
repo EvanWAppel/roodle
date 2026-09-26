@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/db/client';
+import { resolveBaseUrl } from '@/lib/baseUrl';
 import { getCurrentUser } from '@/auth/currentUser';
 import { acceptInvite, InviteEmailMismatchError } from '@/auth/invites';
 import { POST_LOGIN_COOKIE, POST_LOGIN_MAX_AGE_S } from '@/auth/session';
@@ -10,6 +11,7 @@ import { POST_LOGIN_COOKIE, POST_LOGIN_MAX_AGE_S } from '@/auth/session';
  * accept URL stashed so the callback can bring them back here to finish.
  */
 export async function GET(req: Request) {
+  const base = resolveBaseUrl(req);
   const token = new URL(req.url).searchParams.get('token');
   if (!token) {
     return NextResponse.json({ error: 'missing token' }, { status: 400 });
@@ -18,7 +20,7 @@ export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user) {
     // Defer the accept: sign in first, then the callback returns here.
-    const res = NextResponse.redirect(new URL('/signin', req.url));
+    const res = NextResponse.redirect(new URL('/signin', base));
     const returnTo = `/api/invites/accept?token=${token}`;
     res.cookies.set(POST_LOGIN_COOKIE, returnTo, {
       httpOnly: true,
@@ -51,5 +53,5 @@ export async function GET(req: Request) {
   }
 
   // Friends now — drop them into the game.
-  return NextResponse.redirect(new URL('/play', req.url));
+  return NextResponse.redirect(new URL('/play', base));
 }
