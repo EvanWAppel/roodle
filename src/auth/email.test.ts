@@ -116,4 +116,21 @@ describe('email transports', () => {
       }),
     ).rejects.toThrow(/Resend send failed: 500/);
   });
+
+  it('ResendTransport HTML-escapes the link so a URL cannot break out of the markup', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => '' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    // A hostile-looking URL with attribute- and tag-breaking characters.
+    const nasty = 'https://x/?a="><script>alert(1)</script>&b=1';
+    await new ResendTransport('re_key', 'x@y.com').sendNudge({
+      to: 'a@b.com',
+      url: nasty,
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    // The raw injection payload must not appear; its escaped form must.
+    expect(body.html).not.toContain('"><script>');
+    expect(body.html).toContain('&quot;&gt;&lt;script&gt;');
+  });
 });

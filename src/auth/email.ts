@@ -1,3 +1,17 @@
+/**
+ * Escape a value for safe interpolation into HTML text or a double-quoted
+ * attribute. Our links are currently server-built (UUIDs + configured host), so
+ * this is defensive: it keeps the email templates injection-proof if a link ever
+ * carries user-influenced content.
+ */
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 export interface MagicLinkEmail {
   to: string;
   url: string;
@@ -73,7 +87,7 @@ export class ResendTransport implements EmailTransport {
         subject: 'Your Roodle sign-in link',
         html:
           `<p>Tap to sign in to Roodle:</p>` +
-          `<p><a href="${url}">${url}</a></p>` +
+          `<p><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></p>` +
           `<p>This link is single-use and expires in 15 minutes.</p>`,
       }),
     });
@@ -95,7 +109,7 @@ export class ResendTransport implements EmailTransport {
         subject: 'You’re invited to play Roodle',
         html:
           `<p>A friend invited you to draw &amp; guess on Roodle:</p>` +
-          `<p><a href="${url}">${url}</a></p>` +
+          `<p><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></p>` +
           `<p>Tap the link to accept and start playing.</p>`,
       }),
     });
@@ -117,7 +131,7 @@ export class ResendTransport implements EmailTransport {
         subject: 'It’s your turn on Roodle',
         html:
           `<p>A friend drew something for you — it’s your turn to guess:</p>` +
-          `<p><a href="${url}">${url}</a></p>` +
+          `<p><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></p>` +
           `<p>Tap the link to open the drawing and play.</p>`,
       }),
     });
