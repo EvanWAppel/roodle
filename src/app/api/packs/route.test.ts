@@ -6,6 +6,11 @@ import { __setTestDb } from '@/db/client';
 import { users, packs, words } from '@/db/schema';
 import type { DB } from '@/db/client';
 import type { User } from '@/db/schema';
+import {
+  MAX_PACK_WORDS,
+  MAX_WORD_LENGTH,
+  MAX_PACK_NAME_LENGTH,
+} from '@/db/packs';
 
 const currentUser = vi.fn<() => Promise<User | null>>();
 vi.mock('@/auth/currentUser', () => ({
@@ -89,6 +94,22 @@ describe('POST /api/packs (WORD-04)', () => {
 
   it('returns 400 for an empty word list', async () => {
     const res = await packsRoute(post({ name: 'Empty', words: [] }));
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when the word list exceeds the cap (storage-abuse guard)', async () => {
+    const many = Array.from({ length: MAX_PACK_WORDS + 1 }, (_, i) => `w${i}`);
+    const res = await packsRoute(post({ name: 'Too Many', words: many }));
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 for an over-long word or pack name', async () => {
+    const longWord = 'x'.repeat(MAX_WORD_LENGTH + 1);
+    let res = await packsRoute(post({ name: 'Long Word', words: [longWord] }));
+    expect(res.status).toBe(400);
+
+    const longName = 'n'.repeat(MAX_PACK_NAME_LENGTH + 1);
+    res = await packsRoute(post({ name: longName, words: ['ok'] }));
     expect(res.status).toBe(400);
   });
 });

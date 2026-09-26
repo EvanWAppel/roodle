@@ -147,17 +147,41 @@ describe('packs data access (WORD-03/04/05)', () => {
   });
 
   it('listPacksForGame reports enabled flags', async () => {
-    const { game } = await makeGame(db);
+    const { game, owner } = await makeGame(db);
     const [animals] = await db
       .select()
       .from(packs)
       .where(eq(packs.name, 'Animals'));
     await setPackEnabled(db, game.id, animals.id, true);
 
-    const list = await listPacksForGame(db, game.id);
+    const list = await listPacksForGame(db, game.id, owner.id);
     const animalsRow = list.find((p) => p.id === animals.id)!;
     expect(animalsRow.enabled).toBe(true);
     const others = list.filter((p) => p.id !== animals.id);
     expect(others.every((p) => p.enabled === false)).toBe(true);
+  });
+
+  it('listPacksForGame hides other users\' custom packs (IDOR fix)', async () => {
+    const { game, owner } = await makeGame(db);
+    const stranger = await makeUser(db, 'stranger@x.com');
+    // The game owner's own custom pack — should be visible to them.
+    const mine = await createCustomPack(db, {
+      ownerId: owner.id,
+      name: 'My Secret Pack',
+      words: [{ text: 'noodle' }],
+    });
+    // A stranger's custom pack — must NOT leak to the game owner.
+    const theirs = await createCustomPack(db, {
+      ownerId: stranger.id,
+      name: 'Their Secret Pack',
+      words: [{ text: 'roodle' }],
+    });
+
+    const list = await listPacksForGame(db, game.id, owner.id);
+    const ids = list.map((p) => p.id);
+    expect(ids).toContain(mine.id);
+    expect(ids).not.toContain(theirs.id);
+    // Built-ins are still visible to everyone.
+    expect(list.some((p) => p.isBuiltin)).toBe(true);
   });
 });

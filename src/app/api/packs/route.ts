@@ -5,6 +5,9 @@ import {
   createCustomPack,
   listPacksForGame,
   isGameMember,
+  MAX_PACK_NAME_LENGTH,
+  MAX_PACK_WORDS,
+  MAX_WORD_LENGTH,
   type CustomPackWord,
 } from '@/db/packs';
 import type { Difficulty } from '@/db/schema';
@@ -49,14 +52,34 @@ export async function POST(req: Request) {
   if (!body || typeof body.name !== 'string' || !body.name.trim()) {
     return NextResponse.json({ error: 'missing pack name' }, { status: 400 });
   }
+  if (body.name.length > MAX_PACK_NAME_LENGTH) {
+    return NextResponse.json(
+      { error: `pack name too long (max ${MAX_PACK_NAME_LENGTH})` },
+      { status: 400 },
+    );
+  }
   if (!Array.isArray(body.words)) {
     return NextResponse.json({ error: 'missing word list' }, { status: 400 });
+  }
+  // Bound the payload before parsing/inserting so one request can't balloon
+  // storage (DoS/abuse guard, mirroring DRAW-06's size budget).
+  if (body.words.length > MAX_PACK_WORDS) {
+    return NextResponse.json(
+      { error: `too many words (max ${MAX_PACK_WORDS})` },
+      { status: 400 },
+    );
   }
 
   const parsed = body.words.map(toWord).filter((w): w is CustomPackWord => w !== null);
   if (parsed.length === 0) {
     return NextResponse.json(
       { error: 'word list must contain at least one word' },
+      { status: 400 },
+    );
+  }
+  if (parsed.some((w) => w.text.length > MAX_WORD_LENGTH)) {
+    return NextResponse.json(
+      { error: `word too long (max ${MAX_WORD_LENGTH})` },
       { status: 400 },
     );
   }
@@ -88,6 +111,6 @@ export async function GET(req: Request) {
   if (!(await isGameMember(db, gameId, user.id))) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
-  const list = await listPacksForGame(db, gameId);
+  const list = await listPacksForGame(db, gameId, user.id);
   return NextResponse.json(list);
 }

@@ -19,6 +19,34 @@ import {
 } from './schema';
 import { pickRandomWord } from '@/lib/words';
 
+/**
+ * Custom-pack size budget (matches the DRAW-06 spirit: an authenticated user
+ * must not be able to balloon storage via one request). Enforced at the API
+ * boundary in POST /api/packs.
+ */
+export const MAX_PACK_NAME_LENGTH = 100;
+export const MAX_PACK_WORDS = 500;
+export const MAX_WORD_LENGTH = 100;
+
+/** Load a single pack by id, or null if it doesn't exist. */
+export async function getPack(db: DB, packId: string): Promise<Pack | null> {
+  const [pack] = await db
+    .select()
+    .from(packs)
+    .where(eq(packs.id, packId))
+    .limit(1);
+  return pack ?? null;
+}
+
+/**
+ * A pack is usable by a user only if it's a built-in pack or one they own.
+ * This is the ownership gate that keeps one user's custom packs private to them
+ * (prevents the D11-class IDOR: enumerating or enabling another user's packs).
+ */
+export function isPackUsableBy(pack: Pack, userId: string): boolean {
+  return pack.isBuiltin || pack.ownerId === userId;
+}
+
 /** Is this user one of the two players in the given game? Order-independent. */
 export async function isGameMember(
   db: DB,
@@ -121,14 +149,21 @@ export interface PackWithEnabled extends Pack {
   enabled: boolean;
 }
 
-/** Every pack (built-in + this game's custom packs), each flagged enabled. */
+/**
+ * Packs visible to `userId` for a game — built-in packs plus the user's OWN
+ * custom packs — each flagged enabled. Other users' custom packs are never
+ * disclosed (D11-class IDOR fix; previously this returned every pack).
+ */
 export async function listPacksForGame(
   db: DB,
   gameId: string,
+  userId: string,
 ): Promise<PackWithEnabled[]> {
   const all = await db.select().from(packs);
   const enabled = new Set(await enabledPackIdsForGame(db, gameId));
-  return all.map((p) => ({ ...p, enabled: enabled.has(p.id) }));
+  return all
+    .filter((p) => isPackUsableBy(p, userId))
+    .map((p) => ({ ...p, enabled: enabled.has(p.id) }));
 }
 
 export interface SelectWordOptions {

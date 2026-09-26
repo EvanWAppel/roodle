@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { createTestDb } from '@/db/testDb';
 import { __setTestDb } from '@/db/client';
 import { users, games, packs, gamePacks } from '@/db/schema';
+import { createCustomPack } from '@/db/packs';
 import type { DB } from '@/db/client';
 import type { User } from '@/db/schema';
 import { seedBuiltinPacks } from '@/db/packsSeed';
@@ -101,5 +102,39 @@ describe('POST /api/packs/enable (WORD-05)', () => {
   it('returns 400 for an invalid payload', async () => {
     const res = await enableRoute(post({ gameId, packId }));
     expect(res.status).toBe(400);
+  });
+
+  it('returns 404 for a pack that does not exist', async () => {
+    const res = await enableRoute(
+      post({
+        gameId,
+        packId: '00000000-0000-0000-0000-000000000000',
+        enabled: true,
+      }),
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 403 when enabling another user's custom pack (IDOR fix)", async () => {
+    // A stranger (not in this game) owns a custom pack.
+    const [stranger] = await db
+      .insert(users)
+      .values({ email: 'stranger@x.com', displayName: 'Stranger' })
+      .returning();
+    const theirs = await createCustomPack(db, {
+      ownerId: stranger.id,
+      name: 'Private Pack',
+      words: [{ text: 'secret' }],
+    });
+    // `me` is a member of the game but does NOT own the pack.
+    const res = await enableRoute(
+      post({ gameId, packId: theirs.id, enabled: true }),
+    );
+    expect(res.status).toBe(403);
+    const rows = await db
+      .select()
+      .from(gamePacks)
+      .where(eq(gamePacks.gameId, gameId));
+    expect(rows.map((r) => r.packId)).not.toContain(theirs.id);
   });
 });
