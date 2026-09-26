@@ -5,6 +5,7 @@ import { drizzle as drizzlePg } from 'drizzle-orm/postgres-js';
 import { migrate as migratePg } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import * as schema from './schema';
+import { seedBuiltinPacks } from './packsSeed';
 
 /**
  * Local-first DB for the running app: file-backed PGlite (in-process Postgres).
@@ -32,12 +33,17 @@ async function init(): Promise<DB> {
     const db = drizzlePg(sql, { schema });
     await migratePg(db, { migrationsFolder: './drizzle' });
     // Query API matches PGlite for our usage; bridge the driver-specific types.
-    return db as unknown as DB;
+    const bridged = db as unknown as DB;
+    // WORD-02: ensure the curated built-in packs exist (idempotent per name).
+    await seedBuiltinPacks(bridged);
+    return bridged;
   }
   // Local-first: file-backed PGlite (in-process Postgres).
   const client = new PGlite(process.env.PGLITE_PATH ?? './.pglite');
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder: './drizzle' });
+  // WORD-02: ensure the curated built-in packs exist (idempotent per name).
+  await seedBuiltinPacks(db);
   return db;
 }
 

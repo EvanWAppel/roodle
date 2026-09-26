@@ -147,37 +147,37 @@ Deepens the SLICE-06 minimal canvas.
 - [x] **DRAW-04** Undo + clear. Test: undo removes the last stroke; clear empties.
 - [x] **DRAW-05** Touch + pointer support (phone primary). Test: pointer events
   produce the same stroke model as mouse.
-- [ ] **DRAW-06** Define + validate the stroke-data schema and a size budget
+- [x] **DRAW-06** Define + validate the stroke-data schema and a size budget
   (PRD TQ4). Test: oversized/malformed stroke payloads are rejected.
 - [ ] **DRAW-07** (Optional) render a static thumbnail per submitted drawing for
   galleries. Test: thumbnail generated from strokes.
 
 ## Group WORD — Word packs (built-in + custom)  ⇄ parallel-safe · depends on SLICE
 
-- [ ] **WORD-01** Schema + migration for `pack` and `word` (difficulty). Test:
+- [x] **WORD-01** Schema + migration for `pack` and `word` (difficulty). Test:
   round-trip.
-- [ ] **WORD-02** Seed curated built-in packs (categories + difficulty). Test:
+- [x] **WORD-02** Seed curated built-in packs (categories + difficulty). Test:
   seed loads expected counts.
-- [ ] **WORD-03** Word selection honors enabled packs + difficulty. Test: only
+- [x] **WORD-03** Word selection honors enabled packs + difficulty. Test: only
   words from enabled packs at the chosen difficulty are offered.
-- [ ] **WORD-04** `POST /api/packs` — create a custom pack (name + word list).
+- [x] **WORD-04** `POST /api/packs` — create a custom pack (name + word list).
   Test: persists; empty/invalid pack rejected.
-- [ ] **WORD-05** Enable/disable packs per game. Test: disabled pack's words never
+- [x] **WORD-05** Enable/disable packs per game. Test: disabled pack's words never
   offered.
-- [ ] **WORD-06** Pack management UI (create custom, toggle enabled). Test
+- [x] **WORD-06** Pack management UI (create custom, toggle enabled). Test
   (component): creating a pack posts the words.
 
 ## Group GUESS — Replay & letter-tile guessing  ⇄ parallel-safe · depends on SLICE
 
 Deepens SLICE-08/09.
 
-- [ ] **GUESS-01** Replay controls: replay-again + jump-to-final. Test: controls
+- [x] **GUESS-01** Replay controls: replay-again + jump-to-final. Test: controls
   reset/complete the animation.
-- [ ] **GUESS-02** Tile tray with **decoy letters** mixed in. Test: tray contains
+- [x] **GUESS-02** Tile tray with **decoy letters** mixed in. Test: tray contains
   all correct letters plus N decoys; still solvable.
-- [ ] **GUESS-03** Tile UX polish: tap-to-place next blank, tap-filled-to-clear,
+- [x] **GUESS-03** Tile UX polish: tap-to-place next blank, tap-filled-to-clear,
   visual "wrong" feedback. Test: interactions update blanks correctly.
-- [ ] **GUESS-04** Give-up / reveal flow with word reveal. Test: reveal shows the
+- [x] **GUESS-04** Give-up / reveal flow with word reveal. Test: reveal shows the
   word and records `gave_up`.
 - [ ] **GUESS-05** (Optional) hint: reveal one letter. Test: a hinted letter is
   pre-placed and locked.

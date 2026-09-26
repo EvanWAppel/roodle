@@ -5,6 +5,7 @@ import {
   integer,
   timestamp,
   jsonb,
+  boolean,
   unique,
 } from 'drizzle-orm/pg-core';
 import type { Drawing } from '@/lib/strokes';
@@ -101,6 +102,53 @@ export const friendships = pgTable(
   (t) => [unique('friendships_pair_unique').on(t.userAId, t.userBId)],
 );
 
+export type Difficulty = 'easy' | 'medium' | 'hard';
+
+/**
+ * A word pack: a named collection of words. Built-in packs are curated and
+ * shared (ownerId null, isBuiltin true); custom packs are owned by the user
+ * who created them (WORD-04). `difficulty` on the word is metadata only — it
+ * does NOT affect scoring (DECISIONS.md D5; still flat 1 point).
+ */
+export const packs = pgTable('packs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  ownerId: uuid('owner_id').references(() => users.id),
+  isBuiltin: boolean('is_builtin').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+/** A single word belonging to a pack, tagged with a difficulty (metadata). */
+export const words = pgTable('words', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  packId: uuid('pack_id')
+    .notNull()
+    .references(() => packs.id),
+  text: text('text').notNull(),
+  difficulty: text('difficulty').notNull().$type<Difficulty>().default('easy'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+/**
+ * Per-game pack enablement (WORD-05). Presence of a row = the pack is enabled
+ * for that game. Absence = disabled. A pair of (gameId, packId) is unique so a
+ * pack can't be enabled twice for the same game.
+ */
+export const gamePacks = pgTable(
+  'game_packs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    gameId: uuid('game_id')
+      .notNull()
+      .references(() => games.id),
+    packId: uuid('pack_id')
+      .notNull()
+      .references(() => packs.id),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [unique('game_packs_pair_unique').on(t.gameId, t.packId)],
+);
+
 export type User = typeof users.$inferSelect;
 export type Invite = typeof invites.$inferSelect;
 export type Friendship = typeof friendships.$inferSelect;
@@ -108,3 +156,8 @@ export type AuthToken = typeof authTokens.$inferSelect;
 export type Game = typeof games.$inferSelect;
 export type Turn = typeof turns.$inferSelect;
 export type NewTurn = typeof turns.$inferInsert;
+export type Pack = typeof packs.$inferSelect;
+export type NewPack = typeof packs.$inferInsert;
+export type Word = typeof words.$inferSelect;
+export type NewWord = typeof words.$inferInsert;
+export type GamePack = typeof gamePacks.$inferSelect;

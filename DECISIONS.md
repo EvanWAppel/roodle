@@ -47,7 +47,8 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
 
 ### D5 — Scoring: flat 1 point per correct guess (for now)
 - **Date:** 2026-09-20
-- **Status:** 🟡 Proposed — pending Evan confirm (PRD OQ3).
+- **Status:** ✅ Confirmed by Evan (2026-09-26) — reaffirmed at the WORD merge:
+  difficulty stays metadata only, scoring remains flat 1 point.
 - **Chose:** a correct guess awards a flat **1 point**; stats derive from turn
   outcomes (points, correct guesses, streaks) rather than a stored score.
 - **Rejected:** difficulty- or speed-scaled points.
@@ -162,3 +163,27 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
   this step introduces; closing them now keeps main sound. Two further review
   rounds verified each fix (incl. a residual open-redirect vector) is closed, with
   a regression test per finding.
+
+### D12 — Post-AUTH fan-out: two waves, NOTIF deferred to wave 2
+- **Date:** 2026-09-25
+- **Status:** 🟡 Proposed by orchestrator — pending Evan confirm.
+- **Chose:** fan out the remaining parallel groups in **two waves** of
+  worktree-isolated agents, merged one at a time with central Check + adversarial
+  Review per merge (ROCRLL):
+  - **Wave 1 (parallel):** **WORD** (packs schema + selection + API + UI),
+    **GUESS** (replay controls, decoy/tile polish, give-up/reveal), **DRAW-06**
+    (stroke-schema validation + size budget on `POST /api/turns`).
+  - **Wave 2 (after wave 1 merges):** **NOTIF** (email nudges + `notify_enabled`).
+- **Rejected:** running all four groups (incl. NOTIF) in one parallel wave.
+- **Why:** wave-1 groups are **file-disjoint** once NOTIF is held back — WORD owns
+  `schema.ts`/migrations/`words.ts`/draw page, DRAW-06 owns `strokes.ts`/turns
+  route, GUESS owns the guess lib+components/play page. **NOTIF is the coupling
+  magnet**: it must edit `schema.ts` (a `notify_enabled` column + migration), the
+  turns route (nudge on create) and the guess route (nudge on resolve) — every one
+  a file another wave-1 agent already owns. Sequencing it second lets it build on
+  the settled schema/routes with near-zero merge conflict, instead of racing three
+  agents on the same three files. Worktree isolation per D2's fan-out rule.
+- **Constraint carried into wave 1:** WORD adds word **difficulty as metadata
+  only**; it must NOT change the flat-1-point scoring of D5 — whether to scale
+  points by difficulty stays Evan's call (revisit D5). Pack *contents* the WORD
+  agent seeds are drafts for Evan to confirm at merge.
