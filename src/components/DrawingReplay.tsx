@@ -37,34 +37,24 @@ export function DrawingReplay({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
 
-  const play = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // jsdom (and older browsers) return null here — never throw on it.
-    const ctx = canvas.getContext('2d');
-
-    // Cancel any in-flight animation before restarting.
+  const cancelAnim = useCallback(() => {
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+  }, []);
 
-    if (ctx) {
-      ctx.fillStyle = CANVAS_BG;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-    }
-
-    // Flatten points but keep, per point, its stroke's color/width and whether
-    // it begins a stroke (so we lift the pen between strokes).
-    type Step = {
-      point: Point;
-      startsStroke: boolean;
-      color: string;
-      width: number;
-    };
+  /**
+   * Flatten points but keep, per point, its stroke's color/width and whether
+   * it begins a stroke (so we lift the pen between strokes).
+   */
+  type Step = {
+    point: Point;
+    startsStroke: boolean;
+    color: string;
+    width: number;
+  };
+  const buildSteps = useCallback((): Step[] => {
     const steps: Step[] = [];
     for (const stroke of drawing) {
       stroke.points.forEach((point, index) => {
@@ -76,16 +66,16 @@ export function DrawingReplay({
         });
       });
     }
+    return steps;
+  }, [drawing]);
 
-    if (steps.length === 0) {
-      onDone?.();
-      return;
-    }
-
-    let i = 0;
-
-    const drawUpTo = (target: number) => {
-      if (!ctx) return;
+  const drawSteps = useCallback(
+    (
+      ctx: CanvasRenderingContext2D,
+      canvas: HTMLCanvasElement,
+      steps: Step[],
+      target: number,
+    ) => {
       ctx.fillStyle = CANVAS_BG;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       const limit = Math.min(target, steps.length - 1);
@@ -104,10 +94,38 @@ export function DrawingReplay({
         ctx.stroke();
         k = j;
       }
-    };
+    },
+    [],
+  );
+
+  const play = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // jsdom (and older browsers) return null here — never throw on it.
+    const ctx = canvas.getContext('2d');
+
+    // Cancel any in-flight animation before restarting.
+    cancelAnim();
+
+    if (ctx) {
+      ctx.fillStyle = CANVAS_BG;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+
+    const steps = buildSteps();
+
+    if (steps.length === 0) {
+      onDone?.();
+      return;
+    }
+
+    let i = 0;
 
     const tick = () => {
-      drawUpTo(i);
+      if (ctx) drawSteps(ctx, canvas, steps, i);
       i++;
       if (i < steps.length) {
         rafRef.current = requestAnimationFrame(tick);
@@ -121,20 +139,38 @@ export function DrawingReplay({
       rafRef.current = requestAnimationFrame(tick);
     } else {
       // Fallback: draw everything at once.
-      drawUpTo(steps.length - 1);
+      if (ctx) drawSteps(ctx, canvas, steps, steps.length - 1);
       onDone?.();
     }
-  }, [drawing, onDone]);
+  }, [buildSteps, drawSteps, cancelAnim, onDone]);
+
+  /** Skip the animation: render the completed drawing at once and signal done. */
+  const jumpToFinal = useCallback(() => {
+    // Stop any in-flight animation so it can't keep ticking over the final frame.
+    cancelAnim();
+
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d') ?? null;
+    if (ctx && canvas) {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+
+    const steps = buildSteps();
+    if (steps.length === 0) {
+      onDone?.();
+      return;
+    }
+    if (ctx && canvas) drawSteps(ctx, canvas, steps, steps.length - 1);
+    onDone?.();
+  }, [buildSteps, drawSteps, cancelAnim, onDone]);
 
   useEffect(() => {
     play();
     return () => {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
+      cancelAnim();
     };
-  }, [play]);
+  }, [play, cancelAnim]);
 
   return (
     <div>
@@ -142,6 +178,9 @@ export function DrawingReplay({
       <div>
         <button type="button" onClick={play}>
           Replay
+        </button>
+        <button type="button" onClick={jumpToFinal}>
+          Jump to final
         </button>
       </div>
     </div>
