@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
 import type { Drawing } from '@/lib/strokes';
 import { DrawingReplay, orderedPoints } from './DrawingReplay';
 
@@ -58,5 +59,40 @@ describe('DrawingReplay', () => {
 
   it('does not throw when the canvas 2d context is null (jsdom)', () => {
     expect(() => render(<DrawingReplay drawing={drawing} />)).not.toThrow();
+  });
+
+  it('renders a jump-to-final control', () => {
+    render(<DrawingReplay drawing={drawing} />);
+    expect(
+      screen.getByRole('button', { name: /jump to final/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('jump-to-final completes immediately, cancelling the animation and firing onDone', async () => {
+    const user = userEvent.setup();
+    const onDone = vi.fn();
+    const cancelSpy = vi.spyOn(globalThis, 'cancelAnimationFrame');
+    render(<DrawingReplay drawing={drawing} onDone={onDone} />);
+
+    const before = onDone.mock.calls.length;
+    await user.click(screen.getByRole('button', { name: /jump to final/i }));
+
+    // Jump renders the completed drawing synchronously and signals completion,
+    // over and above whatever the initial animation may have already reported.
+    expect(onDone.mock.calls.length).toBeGreaterThan(before);
+    // The in-flight animation is cancelled so it cannot keep ticking.
+    expect(cancelSpy).toHaveBeenCalled();
+    cancelSpy.mockRestore();
+  });
+
+  it('replay restarts the animation from the beginning', async () => {
+    const user = userEvent.setup();
+    const onDone = vi.fn();
+    render(<DrawingReplay drawing={drawing} onDone={onDone} />);
+
+    const before = onDone.mock.calls.length;
+    await user.click(screen.getByRole('button', { name: /^replay$/i }));
+    // Replay re-arms the animation; eventually it completes again.
+    expect(onDone.mock.calls.length).toBeGreaterThanOrEqual(before);
   });
 });

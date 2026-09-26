@@ -67,6 +67,30 @@ describe('LetterTiles', () => {
     expect(onComplete).toHaveBeenCalledWith('CAT');
   });
 
+  it('does not surface wrong feedback by default', () => {
+    const onComplete = vi.fn<(guess: string) => void>();
+    render(<LetterTiles tiles={['T', 'A', 'C', 'X']} length={3} onComplete={onComplete} />);
+    const group = screen.getByRole('group', { name: 'answer' });
+    expect(group).toHaveAttribute('data-wrong', 'false');
+  });
+
+  it('surfaces wrong feedback on the answer group when wrong is set', () => {
+    const onComplete = vi.fn<(guess: string) => void>();
+    render(
+      <LetterTiles tiles={['T', 'A', 'C', 'X']} length={3} onComplete={onComplete} wrong />,
+    );
+    const group = screen.getByRole('group', { name: 'answer' });
+    expect(group).toHaveAttribute('data-wrong', 'true');
+    // Each blank carries the wrong marker a stylesheet/test can hook into.
+    const blanks = screen
+      .getAllByRole('button')
+      .filter((b) => b.getAttribute('data-role') === 'blank');
+    expect(blanks.length).toBe(3);
+    for (const blank of blanks) {
+      expect(blank).toHaveAttribute('data-wrong', 'true');
+    }
+  });
+
   it('tracks duplicate letters by tile index so both copies are consumable', async () => {
     const user = userEvent.setup();
     const onComplete = vi.fn<(guess: string) => void>();

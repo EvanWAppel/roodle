@@ -23,6 +23,7 @@ export default function PlayPage() {
   const [pending, setPending] = useState<TurnDTO[]>([]);
   const [active, setActive] = useState<TurnDTO | null>(null);
   const [result, setResult] = useState<string>('');
+  const [wrong, setWrong] = useState(false);
 
   const refresh = useCallback(async (guesserId: string) => {
     setPending(await fetchPending(guesserId));
@@ -38,6 +39,7 @@ export default function PlayPage() {
       setFriends(s.friends);
       setActive(null);
       setResult('');
+      setWrong(false);
       await refresh(s.me.id);
     });
   }, [router, refresh]);
@@ -56,21 +58,30 @@ export default function PlayPage() {
       if (!active || !me) return;
       const updated = await submitGuess(active.id, guess);
       if (updated.status === 'guessed') {
+        setWrong(false);
         setResult(`Correct! +${updated.pointsAwarded} point 🎉 (it was "${active.word}")`);
         setActive(null);
         await refresh(me.id);
       } else {
+        setWrong(true);
         setResult('Not quite — try again.');
       }
     },
     [active, me, refresh],
   );
 
+  // Dismiss the wrong-state as soon as the player edits their guess again.
+  const onEdit = useCallback(() => {
+    setWrong(false);
+    setResult('');
+  }, []);
+
   const onGiveUp = useCallback(async () => {
     if (!active || !me) return;
     const updated = await giveUp(active.id);
     setResult(`The word was "${updated.word}". No points this time.`);
     setActive(null);
+    setWrong(false);
     await refresh(me.id);
   }, [active, me, refresh]);
 
@@ -115,6 +126,7 @@ export default function PlayPage() {
                 onClick={() => {
                   setActive(t);
                   setResult('');
+                  setWrong(false);
                 }}
               >
                 A drawing to guess ({t.word.replace(/\s+/g, '').length} letters)
@@ -135,6 +147,8 @@ export default function PlayPage() {
             tiles={tiles}
             length={blanks}
             onComplete={onComplete}
+            wrong={wrong}
+            onChange={onEdit}
           />
           <button
             type="button"

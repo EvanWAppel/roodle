@@ -9,6 +9,10 @@ export interface LetterTilesProps {
   length: number;
   /** Called with the assembled uppercase guess once every blank is filled. */
   onComplete: (guess: string) => void;
+  /** When true, the assembled guess was wrong: blanks show a "wrong" visual state. */
+  wrong?: boolean;
+  /** Called whenever the blanks change (place or clear), e.g. to dismiss wrong feedback. */
+  onChange?: () => void;
 }
 
 /**
@@ -18,7 +22,13 @@ export interface LetterTilesProps {
  * filled blank clears it and returns its tile to the tray. When all blanks are
  * filled, onComplete fires with the concatenated uppercase letters.
  */
-export function LetterTiles({ tiles, length, onComplete }: LetterTilesProps) {
+export function LetterTiles({
+  tiles,
+  length,
+  onComplete,
+  wrong = false,
+  onChange,
+}: LetterTilesProps) {
   // Each blank holds the tray index of the tile placed in it, or null.
   const [slots, setSlots] = useState<(number | null)[]>(() => Array(length).fill(null));
 
@@ -30,6 +40,7 @@ export function LetterTiles({ tiles, length, onComplete }: LetterTilesProps) {
     const next = slots.slice();
     next[nextEmpty] = tileIndex;
     setSlots(next);
+    onChange?.();
 
     if (next.every((s) => s !== null)) {
       const guess = next.map((s) => tiles[s as number]).join('').toUpperCase();
@@ -42,11 +53,21 @@ export function LetterTiles({ tiles, length, onComplete }: LetterTilesProps) {
     const next = slots.slice();
     next[slotIndex] = null;
     setSlots(next);
+    onChange?.();
   }
 
   return (
     <div>
-      <div role="group" aria-label="answer" style={{ display: 'flex', gap: '0.5rem' }}>
+      <div
+        role="group"
+        aria-label="answer"
+        data-wrong={wrong}
+        style={{
+          display: 'flex',
+          gap: '0.5rem',
+          color: wrong ? '#b91c1c' : undefined,
+        }}
+      >
         {slots.map((tileIndex, i) => {
           const filled = tileIndex !== null;
           const letter = filled ? tiles[tileIndex] : '';
@@ -55,9 +76,11 @@ export function LetterTiles({ tiles, length, onComplete }: LetterTilesProps) {
               key={i}
               type="button"
               data-role="blank"
+              data-wrong={wrong}
               aria-label={filled ? letter : `blank ${i + 1}`}
               onClick={() => clearSlot(i)}
               disabled={!filled}
+              style={wrong ? { borderColor: '#b91c1c' } : undefined}
             >
               {letter || '_'}
             </button>
