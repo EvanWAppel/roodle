@@ -131,4 +131,56 @@ describe('auth routes (AUTH-02/03 wiring)', () => {
     expect(res.status).toBeGreaterThanOrEqual(300);
     expect(res.headers.get('location')).toContain('/signin?error=link');
   });
+
+  it('post-login redirect uses the forwarded host, not the internal localhost (proxy fix)', async () => {
+    // Behind a proxy req.url is localhost:8080; the redirect must target the
+    // public host from x-forwarded-host so the user does not land on localhost.
+    const reqRes = await requestRoute(
+      new Request('http://localhost:8080/api/auth/request', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: 'proxy@example.com' }),
+      }),
+    );
+    const { devLink } = (await reqRes.json()) as { devLink: string };
+    const token = new URL(devLink).searchParams.get('token')!;
+
+    const cbRes = await callbackRoute(
+      new Request(`http://localhost:8080/api/auth/callback?token=${token}`, {
+        headers: {
+          'x-forwarded-host': 'roodle-web-production.up.railway.app',
+          'x-forwarded-proto': 'https',
+        },
+      }),
+    );
+    const location = cbRes.headers.get('location')!;
+    expect(new URL(location).host).toBe('roodle-web-production.up.railway.app');
+    expect(location).not.toContain('localhost');
+  });
+
+  it('open-redirect guard still holds when a forwarded host is present', async () => {
+    const reqRes = await requestRoute(
+      new Request('http://localhost:8080/api/auth/request', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: 'proxyevil@example.com' }),
+      }),
+    );
+    const { devLink } = (await reqRes.json()) as { devLink: string };
+    const token = new URL(devLink).searchParams.get('token')!;
+
+    const cbRes = await callbackRoute(
+      new Request(`http://localhost:8080/api/auth/callback?token=${token}`, {
+        headers: {
+          'x-forwarded-host': 'roodle-web-production.up.railway.app',
+          'x-forwarded-proto': 'https',
+          // A protocol-relative open-redirect attempt smuggled via the cookie.
+          cookie: `roodle_post_login=${encodeURIComponent('//evil.com')}`,
+        },
+      }),
+    );
+    const location = cbRes.headers.get('location')!;
+    // Must stay on the app's (forwarded) host — never evil.com.
+    expect(new URL(location).host).toBe('roodle-web-production.up.railway.app');
+  });
 });

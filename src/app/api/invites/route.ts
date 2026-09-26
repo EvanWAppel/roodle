@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/db/client';
+import { resolveBaseUrl } from '@/lib/baseUrl';
 import { getCurrentUser } from '@/auth/currentUser';
 import { createInvite, DuplicateInviteError } from '@/auth/invites';
 import { defaultTransport } from '@/auth/email';
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
     throw e; // never hide unexpected failures
   }
 
-  const base = process.env.APP_URL ?? new URL(req.url).origin;
+  const base = resolveBaseUrl(req);
   const url = `${base}/api/invites/accept?token=${token}`;
   await defaultTransport().sendInvite({ to: body.email.trim().toLowerCase(), url });
 
