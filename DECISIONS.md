@@ -47,7 +47,8 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
 
 ### D5 — Scoring: flat 1 point per correct guess (for now)
 - **Date:** 2026-09-20
-- **Status:** 🟡 Proposed — pending Evan confirm (PRD OQ3).
+- **Status:** ✅ Confirmed by Evan (2026-09-26) — reaffirmed at the WORD merge:
+  difficulty stays metadata only, scoring remains flat 1 point.
 - **Chose:** a correct guess awards a flat **1 point**; stats derive from turn
   outcomes (points, correct guesses, streaks) rather than a stored score.
 - **Rejected:** difficulty- or speed-scaled points.
