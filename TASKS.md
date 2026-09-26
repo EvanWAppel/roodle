@@ -200,14 +200,14 @@ Deepens SLICE-08/09.
 
 - [x] **NOTIF-01** Choose email provider + verified sender domain (PRD TQ2) →
   record in `DECISIONS.md`.
-- [ ] **NOTIF-02** Email-send module (magic links + nudges), mockable in tests.
+- [x] **NOTIF-02** Email-send module (magic links + nudges), mockable in tests.
   Test: send is called with correct recipient/subject/body; failures surface
   (no silent swallow).
-- [ ] **NOTIF-03** Trigger a **single** nudge when a turn becomes someone's turn
+- [x] **NOTIF-03** Trigger a **single** nudge when a turn becomes someone's turn
   (draw submitted / guess resolved). Test: exactly one email per pending turn.
-- [ ] **NOTIF-04** Deep link in the email opens the pending turn. Test: link
+- [x] **NOTIF-04** Deep link in the email opens the pending turn. Test: link
   resolves to the correct turn.
-- [ ] **NOTIF-05** Per-user notify toggle + unsubscribe; respect `notify_enabled`.
+- [x] **NOTIF-05** Per-user notify toggle + unsubscribe; respect `notify_enabled`.
   Test: disabled users get no email.
 
 ---
