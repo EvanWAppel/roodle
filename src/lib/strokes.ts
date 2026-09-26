@@ -54,10 +54,19 @@ export const DEFAULT_BRUSH = BRUSH_SIZES[1].width;
  * - MAX_TOTAL_POINTS (100000): the overall ceiling. At ~2 numbers/point this is
  *   ~200k coordinates — a few MB of JSON worst case — which bounds storage and
  *   parse cost while still fitting any plausible drawing.
+ *
+ * The point caps only bound the *points*, so per-stroke scalar fields need their
+ * own limits or a pointless stroke with a giant `color` string still balloons the
+ * payload:
+ * - MAX_COLOR_LENGTH (32): the app emits short hex colors (`#111827`); 32 covers
+ *   `rgba(...)`/named colors with headroom while rejecting megabyte-string abuse.
+ * - MAX_WIDTH (64): the largest brush is 8px; 64 is generous but bounds the field.
  */
 export const MAX_STROKES = 2000;
 export const MAX_POINTS_PER_STROKE = 5000;
 export const MAX_TOTAL_POINTS = 100_000;
+export const MAX_COLOR_LENGTH = 32;
+export const MAX_WIDTH = 64;
 
 /** Result of validating an untrusted value against the {@link Drawing} shape. */
 export type ValidateDrawingResult =
@@ -101,10 +110,22 @@ export function validateDrawing(value: unknown): ValidateDrawingResult {
     if (typeof color !== 'string') {
       return { ok: false, error: `stroke ${i} has a non-string color` };
     }
+    if (color.length > MAX_COLOR_LENGTH) {
+      return {
+        ok: false,
+        error: `stroke ${i} color is too long (max ${MAX_COLOR_LENGTH})`,
+      };
+    }
     if (!isFiniteNumber(width) || width <= 0) {
       return {
         ok: false,
         error: `stroke ${i} has a non-positive or non-finite width`,
+      };
+    }
+    if (width > MAX_WIDTH) {
+      return {
+        ok: false,
+        error: `stroke ${i} width is too large (max ${MAX_WIDTH})`,
       };
     }
     if (!Array.isArray(points)) {

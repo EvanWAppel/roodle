@@ -4,6 +4,8 @@ import {
   MAX_STROKES,
   MAX_POINTS_PER_STROKE,
   MAX_TOTAL_POINTS,
+  MAX_COLOR_LENGTH,
+  MAX_WIDTH,
 } from './strokes';
 
 const validStroke = {
@@ -137,5 +139,30 @@ describe('validateDrawing', () => {
     // tripping the stroke-count cap first.
     expect(strokes.length).toBeLessThanOrEqual(MAX_STROKES);
     expect(validateDrawing(strokes).ok).toBe(false);
+  });
+
+  it('rejects an over-long color string (payload-size abuse via a scalar field)', () => {
+    // One stroke, zero points — sails past every point-based cap — but a giant
+    // color string would still balloon the persisted JSON.
+    const stroke = {
+      color: 'x'.repeat(MAX_COLOR_LENGTH + 1),
+      width: 4,
+      points: [],
+    };
+    expect(validateDrawing([stroke]).ok).toBe(false);
+  });
+
+  it('accepts a color exactly at the length cap', () => {
+    const stroke = {
+      color: '#'.padEnd(MAX_COLOR_LENGTH, 'a'),
+      width: 4,
+      points: [{ x: 0, y: 0 }],
+    };
+    expect(validateDrawing([stroke]).ok).toBe(true);
+  });
+
+  it('rejects an absurdly large width', () => {
+    const stroke = { color: '#111827', width: MAX_WIDTH + 1, points: [] };
+    expect(validateDrawing([stroke]).ok).toBe(false);
   });
 });
