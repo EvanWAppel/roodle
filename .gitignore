@@ -45,3 +45,6 @@ next-env.d.ts
 
 # allow the example env
 !.env.example
+
+# Claude Code local worktrees, settings, and session data
+.claude/

@@ -1,10 +1,12 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { createTestDb } from '@/db/testDb';
 import { __setTestDb } from '@/db/client';
 import { createFriendPair } from '@/db/friends';
 import { users, games } from '@/db/schema';
 import type { Turn, User } from '@/db/schema';
+import { CaptureTransport } from '@/auth/email';
 import { MAX_POINTS_PER_STROKE } from '@/lib/strokes';
 
 // The turns route derives the drawer from the session. Tests set who "me" is.
@@ -12,6 +14,13 @@ const currentUser = vi.fn<() => Promise<User | null>>();
 vi.mock('@/auth/currentUser', () => ({
   getCurrentUser: () => currentUser(),
 }));
+
+// NOTIF-03: the route nudges the guesser via the default transport. Capture it.
+const capture = new CaptureTransport();
+vi.mock('@/auth/email', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/auth/email')>();
+  return { ...actual, defaultTransport: () => capture };
+});
 
 import { POST as createTurnRoute, GET as listTurnsRoute } from './route';
 import { POST as guessRoute } from './[id]/guess/route';
@@ -49,6 +58,7 @@ describe('SLICE-12 end-to-end: draw → pending → guess → point (friend-enfo
     playerA = pair.userA.id;
     playerB = pair.userB.id;
     gameId = pair.game.id;
+    capture.sentNudges.length = 0;
     currentUser.mockReset();
     currentUser.mockResolvedValue(pair.userA); // A is the drawer/session user
   });
@@ -159,6 +169,7 @@ describe('friend-only enforcement on POST /api/turns (GROUP-04)', () => {
     drawer = pair.userA;
     friend = pair.userB;
     gameId = pair.game.id;
+    capture.sentNudges.length = 0;
     currentUser.mockReset();
     currentUser.mockResolvedValue(drawer);
   });
@@ -279,5 +290,87 @@ describe('friend-only enforcement on POST /api/turns (GROUP-04)', () => {
       }),
     );
     expect(res.status).toBe(201);
+  });
+});
+
+describe('turn-nudge email on POST /api/turns (NOTIF-03/04/05)', () => {
+  let db: Awaited<ReturnType<typeof createTestDb>>;
+  let drawer: User;
+  let friend: User;
+  let gameId: string;
+
+  beforeEach(async () => {
+    db = await createTestDb();
+    __setTestDb(db);
+    const pair = await createFriendPair(db, {
+      emailA: 'drawer@example.com',
+      emailB: 'guesser@example.com',
+      displayA: 'Drawer',
+      displayB: 'Guesser',
+    });
+    drawer = pair.userA;
+    friend = pair.userB;
+    gameId = pair.game.id;
+    capture.sentNudges.length = 0;
+    currentUser.mockReset();
+    currentUser.mockResolvedValue(drawer);
+  });
+
+  it('sends exactly one nudge to the guesser with a deep link to the created turn', async () => {
+    const res = await createTurnRoute(
+      post('http://test/api/turns', {
+        gameId,
+        guesserId: friend.id,
+        word: 'cat',
+        strokes: someStrokes,
+      }),
+    );
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as Turn;
+
+    // Exactly one email — one per created turn, not per poll/list.
+    expect(capture.sentNudges).toHaveLength(1);
+    expect(capture.sentNudges[0].to).toBe('guesser@example.com');
+    expect(capture.sentNudges[0].url).toBe(
+      `http://test/play?turn=${created.id}`,
+    );
+  });
+
+  it('does not nudge a guesser who has opted out (notify_enabled = false)', async () => {
+    await db
+      .update(users)
+      .set({ notifyEnabled: false })
+      .where(eq(users.id, friend.id));
+
+    const res = await createTurnRoute(
+      post('http://test/api/turns', {
+        gameId,
+        guesserId: friend.id,
+        word: 'cat',
+        strokes: someStrokes,
+      }),
+    );
+    expect(res.status).toBe(201);
+    expect(capture.sentNudges).toHaveLength(0);
+  });
+
+  it('still creates the turn (201) even if the nudge send fails', async () => {
+    const boom = vi
+      .spyOn(capture, 'sendNudge')
+      .mockRejectedValueOnce(new Error('smtp down'));
+
+    const res = await createTurnRoute(
+      post('http://test/api/turns', {
+        gameId,
+        guesserId: friend.id,
+        word: 'cat',
+        strokes: someStrokes,
+      }),
+    );
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as Turn;
+    expect(created.status).toBe('awaiting_guess');
+    expect(boom).toHaveBeenCalledOnce();
+    boom.mockRestore();
   });
 });

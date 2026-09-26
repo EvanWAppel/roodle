@@ -3,6 +3,7 @@ import { getDb } from '@/db/client';
 import { getCurrentUser } from '@/auth/currentUser';
 import { createTurn, listPendingTurnsFor } from '@/db/turns';
 import { areFriends, findGameForPair } from '@/db/friends';
+import { nudgeGuesser } from '@/notify/nudge';
 import { validateDrawing } from '@/lib/strokes';
 
 /**
@@ -68,6 +69,25 @@ export async function POST(req: Request) {
     word: body.word,
     strokes: drawing.drawing,
   });
+
+  // NOTIF-03/04: the turn is now the guesser's move — email them one nudge with
+  // a deep link to it. Exactly one nudge per created turn (idempotent: this is
+  // the single point where a turn comes into existence; listing/polling never
+  // sends). The turn is already committed, so a send failure must NOT fail the
+  // request — that would mislead the client into retrying and duplicating a
+  // real turn. Per project rules we don't swallow it silently: the failure is
+  // surfaced via console.error (observable in server logs) while the 201 for
+  // the successfully-created turn still returns. See DECISIONS D-NOTIF-01.
+  const base = process.env.APP_URL ?? new URL(req.url).origin;
+  try {
+    await nudgeGuesser(db, turn, base);
+  } catch (err) {
+    console.error(
+      `[roodle] turn ${turn.id} created but nudge to guesser ${turn.guesserId} failed:`,
+      err,
+    );
+  }
+
   return NextResponse.json(turn, { status: 201 });
 }
 

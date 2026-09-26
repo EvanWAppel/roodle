@@ -187,3 +187,27 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
   only**; it must NOT change the flat-1-point scoring of D5 — whether to scale
   points by difficulty stays Evan's call (revisit D5). Pack *contents* the WORD
   agent seeds are drafts for Evan to confirm at merge.
+
+### D13 — A turn-nudge send failure does NOT fail turn creation
+- **Date:** 2026-09-22 (drafted); integrated into main 2026-09-26.
+- **Status:** 🟡 Drafted by agent — **awaiting Evan's confirmation** (NOTIF-03).
+- **Chose:** in `POST /api/turns`, create the turn first, then attempt the nudge
+  inside a `try/catch`. On a nudge failure, `console.error` it (surfaced in server
+  logs) and still return `201` with the created turn. The nudge helper itself
+  (`nudgeGuesser`) never swallows — it propagates; only the route decides not to
+  fail the request on it.
+- **Rejected:** (a) letting the send failure propagate and 500 the request — the
+  turn is already committed, so the client would think creation failed and could
+  retry, creating a **duplicate turn**; (b) silently ignoring the error — violates
+  the project's no-swallow rule and NOTIF-02's "surface send failures".
+- **Why:** turn creation is the source-of-truth mutation; a nudge is a
+  best-effort side-notification. Corrupting the primary action for a secondary
+  notification is worse than a missed email that is still visible in logs. This is
+  the exact "escalate if unsure whether a nudge failure should fail the request"
+  point in the NOTIF brief — flagging for Evan's call.
+- **Idempotency:** exactly one nudge per created turn. Turn creation is the single
+  point where a turn comes into existence; listing/polling (`GET /api/turns`) and
+  guess resolution never send. Guess resolution ends a turn but does not create a
+  new one (the next turn is a separate `POST /api/turns`), so there is no
+  "other player's move" to nudge there — NOTIF-03's "if applicable" clause does
+  not apply in this game model.

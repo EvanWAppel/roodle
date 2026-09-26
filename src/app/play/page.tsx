@@ -26,7 +26,9 @@ export default function PlayPage() {
   const [wrong, setWrong] = useState(false);
 
   const refresh = useCallback(async (guesserId: string) => {
-    setPending(await fetchPending(guesserId));
+    const p = await fetchPending(guesserId);
+    setPending(p);
+    return p;
   }, []);
 
   useEffect(() => {
@@ -37,10 +39,13 @@ export default function PlayPage() {
       }
       setMe(s.me);
       setFriends(s.friends);
-      setActive(null);
       setResult('');
       setWrong(false);
-      await refresh(s.me.id);
+      const pend = await refresh(s.me.id);
+      // Honor an email nudge's deep link (/play?turn=<id>): auto-open that turn
+      // if it's still pending, else fall back to the list (NOTIF-04).
+      const turnParam = new URLSearchParams(window.location.search).get('turn');
+      setActive(turnParam ? (pend.find((t) => t.id === turnParam) ?? null) : null);
     });
   }, [router, refresh]);
 
