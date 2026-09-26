@@ -7,6 +7,7 @@ import { createFriendPair } from '@/db/friends';
 import { users, games } from '@/db/schema';
 import type { Turn, User } from '@/db/schema';
 import { CaptureTransport } from '@/auth/email';
+import { MAX_POINTS_PER_STROKE } from '@/lib/strokes';
 
 // The turns route derives the drawer from the session. Tests set who "me" is.
 const currentUser = vi.fn<() => Promise<User | null>>();
@@ -224,6 +225,62 @@ describe('friend-only enforcement on POST /api/turns (GROUP-04)', () => {
   });
 
   it('succeeds between friends on their game', async () => {
+    const res = await createTurnRoute(
+      post('http://test/api/turns', {
+        gameId,
+        guesserId: friend.id,
+        word: 'cat',
+        strokes: someStrokes,
+      }),
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it('400 when strokes is malformed (not an array)', async () => {
+    const res = await createTurnRoute(
+      post('http://test/api/turns', {
+        gameId,
+        guesserId: friend.id,
+        word: 'cat',
+        strokes: 'not-an-array',
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('400 when a stroke has a bad shape (non-finite coords)', async () => {
+    const res = await createTurnRoute(
+      post('http://test/api/turns', {
+        gameId,
+        guesserId: friend.id,
+        word: 'cat',
+        strokes: [{ color: '#111827', width: 4, points: [{ x: NaN, y: 0 }] }],
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('400 when strokes exceed the size budget (too many total points)', async () => {
+    const huge = Array.from({ length: 25 }, () => ({
+      color: '#111827',
+      width: 4,
+      points: Array.from({ length: MAX_POINTS_PER_STROKE }, () => ({
+        x: 1,
+        y: 1,
+      })),
+    }));
+    const res = await createTurnRoute(
+      post('http://test/api/turns', {
+        gameId,
+        guesserId: friend.id,
+        word: 'cat',
+        strokes: huge,
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('still 201 on a valid payload after hardening', async () => {
     const res = await createTurnRoute(
       post('http://test/api/turns', {
         gameId,

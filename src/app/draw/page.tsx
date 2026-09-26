@@ -13,6 +13,26 @@ import {
 } from '@/lib/api';
 import type { Drawing } from '@/lib/strokes';
 
+/**
+ * Ask the server for a word from the game's enabled packs (WORD-03). Falls back
+ * to the built-in hardcoded list if the offer is empty or the request fails, so
+ * the draw flow always has a word.
+ */
+async function offerWord(gameId: string, exclude?: string): Promise<string> {
+  try {
+    const qs = new URLSearchParams({ gameId });
+    if (exclude) qs.set('exclude', exclude);
+    const res = await fetch(`/api/packs/word?${qs.toString()}`);
+    if (res.ok) {
+      const data = (await res.json()) as { word: { text: string } | null };
+      if (data.word) return data.word.text;
+    }
+  } catch {
+    // fall through to the local list
+  }
+  return pickRandomWord(undefined, exclude);
+}
+
 export default function DrawPage() {
   const router = useRouter();
   const [me, setMe] = useState<Person | null>(null);
@@ -30,13 +50,24 @@ export default function DrawPage() {
       }
       setMe(s.me);
       setFriends(s.friends);
-      // Pick the first word on the client (after mount) to avoid an SSR
-      // hydration mismatch from Math.random; keep any word already chosen.
-      setWord((w) => w || pickRandomWord());
     });
   }, [router]);
 
   const opponent = friends[friendIndex];
+
+  // Offer a word from the selected game's enabled packs once we know the
+  // opponent. Runs on the client (after mount) to avoid an SSR hydration
+  // mismatch from Math.random, and re-offers when switching opponents.
+  useEffect(() => {
+    if (!opponent) return;
+    let active = true;
+    offerWord(opponent.gameId).then((w) => {
+      if (active) setWord(w);
+    });
+    return () => {
+      active = false;
+    };
+  }, [opponent]);
 
   const canSubmit = useMemo(
     () => Boolean(me && opponent && word && drawing.length > 0),
@@ -56,8 +87,13 @@ export default function DrawPage() {
       `Sent to ${opponent.opponent.displayName}! Pick a new word to draw again.`,
     );
     setDrawing([]);
-    setWord(pickRandomWord(word));
+    setWord(await offerWord(opponent.gameId, word));
   }, [me, opponent, word, drawing]);
+
+  const newWord = useCallback(async () => {
+    if (!opponent) return;
+    setWord(await offerWord(opponent.gameId, word));
+  }, [opponent, word]);
 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-4 p-6">
@@ -66,6 +102,9 @@ export default function DrawPage() {
         <nav className="flex gap-4 text-sm">
           <Link href="/play" className="text-blue-600 underline">
             Guess →
+          </Link>
+          <Link href="/packs" className="text-blue-600 underline">
+            Packs
           </Link>
           <Link href="/scores" className="text-blue-600 underline">
             Scores
@@ -116,7 +155,7 @@ export default function DrawPage() {
             <button
               type="button"
               className="rounded border px-2 py-1 text-sm"
-              onClick={() => setWord(pickRandomWord(word))}
+              onClick={newWord}
             >
               New word
             </button>

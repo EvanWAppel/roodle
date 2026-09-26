@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/auth/currentUser';
 import { createTurn, listPendingTurnsFor } from '@/db/turns';
 import { areFriends, findGameForPair } from '@/db/friends';
 import { nudgeGuesser } from '@/notify/nudge';
+import { validateDrawing } from '@/lib/strokes';
 
 /**
  * POST /api/turns — submit a drawing as a new turn (SLICE-04 + GROUP-04).
@@ -28,10 +29,19 @@ export async function POST(req: Request) {
     !body.gameId ||
     !body.guesserId ||
     typeof body.word !== 'string' ||
-    !body.word.trim() ||
-    !Array.isArray(body.strokes)
+    !body.word.trim()
   ) {
     return NextResponse.json({ error: 'invalid turn payload' }, { status: 400 });
+  }
+
+  // Validate + size-budget the stroke data (DRAW-06 / PRD TQ4): reject malformed
+  // or oversized payloads with a clear reason rather than persisting them.
+  const drawing = validateDrawing(body.strokes);
+  if (!drawing.ok) {
+    return NextResponse.json(
+      { error: `invalid strokes: ${drawing.error}` },
+      { status: 400 },
+    );
   }
 
   const db = await getDb();
@@ -57,7 +67,7 @@ export async function POST(req: Request) {
     drawerId: drawer.id,
     guesserId: body.guesserId,
     word: body.word,
-    strokes: body.strokes,
+    strokes: drawing.drawing,
   });
 
   // NOTIF-03/04: the turn is now the guesser's move — email them one nudge with
