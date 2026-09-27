@@ -149,8 +149,11 @@ Deepens the SLICE-06 minimal canvas.
   produce the same stroke model as mouse.
 - [x] **DRAW-06** Define + validate the stroke-data schema and a size budget
   (PRD TQ4). Test: oversized/malformed stroke payloads are rejected.
-- [ ] **DRAW-07** (Optional) render a static thumbnail per submitted drawing for
+- [x] **DRAW-07** (Optional) render a static thumbnail per submitted drawing for
   galleries. Test: thumbnail generated from strokes.
+  *(Reconciled by DESIGN-10: thumbnails are rendered client-side from the stored
+  strokes at view time (`renderDrawing` + `DrawingThumbnail`) rather than generated
+  and stored at submit time — same result, no storage/migration. See DECISIONS D15.)*
 
 ## Group WORD — Word packs (built-in + custom)  ⇄ parallel-safe · depends on SLICE
 
@@ -281,9 +284,14 @@ older Vercel scaffold tasks above are historical and not redesign prerequisites.
   return` swallow. Scores swapped raw gray Tailwind for design tokens; `.stat-panel`
   grid + list/empty styles added to studio.css. 246 tests green, 2 new packs
   error-path tests.)*
-- [ ] **DESIGN-10** Add private completed-drawing gallery with words and outcomes,
+- [x] **DESIGN-10** Add private completed-drawing gallery with words and outcomes,
   secondary scoring, and useful empty states. Test per-game authorization and
   exclusion of pending answers. Reconcile DRAW-07 and SCORE-04 actual completion.
+  *(New `/gallery` route (DECISIONS D15): per-game thumbnail grid → tap to replay.
+  `getGameGallery` returns resolved turns only (pending answers structurally
+  excluded); `isGameMember` gates the `?game=` deep-link. Client-rendered static
+  thumbnails via shared `renderDrawing` reconcile DRAW-07 (see below) with no stored
+  image. 12 new tests: gallery data, membership auth, renderer, thumbnail, tile.)*
 - [ ] **DESIGN-11** Add signed-out introduction and isolated optional sample
   round using labeled fixtures. Test no private data access, game writes, or email.
 - [ ] **DESIGN-12** Finish keyboard, contrast, touch-target and reduced-motion

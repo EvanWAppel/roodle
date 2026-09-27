@@ -55,6 +55,25 @@ export async function ensureFriendship(
   return created;
 }
 
+/**
+ * Is this user one of the two players in this game? Used to authorize per-game
+ * reads (e.g. the completed-drawing gallery) so a user can't view a game they
+ * aren't part of. Returns false for an unknown game.
+ */
+export async function isGameMember(
+  db: DB,
+  userId: string,
+  gameId: string,
+): Promise<boolean> {
+  const [game] = await db
+    .select({ playerA: games.playerA, playerB: games.playerB })
+    .from(games)
+    .where(eq(games.id, gameId))
+    .limit(1);
+  if (!game) return false;
+  return game.playerA === userId || game.playerB === userId;
+}
+
 /** The single game shared by a pair, or undefined. Order-independent. */
 export async function findGameForPair(
   db: DB,
