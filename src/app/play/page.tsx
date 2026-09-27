@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { GameShell } from '@/components/GameShell';
 import { DrawingReplay } from '@/components/DrawingReplay';
 import { LetterTiles } from '@/components/LetterTiles';
 import { buildTileTray } from '@/lib/guess';
@@ -18,6 +19,9 @@ import {
 
 export default function PlayPage() {
   const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [replyGame, setReplyGame] = useState<string | null>(null);
   const [me, setMe] = useState<Person | null>(null);
   const [friends, setFriends] = useState<FriendInfo[]>([]);
   const [pending, setPending] = useState<TurnDTO[]>([]);
@@ -32,23 +36,27 @@ export default function PlayPage() {
   }, []);
 
   useEffect(() => {
-    fetchAuthSession().then(async (s) => {
-      if (!s.me) {
-        router.replace('/signin');
-        return;
-      }
-      setMe(s.me);
-      setFriends(s.friends);
-      setResult('');
-      setWrong(false);
-      const pend = await refresh(s.me.id);
-      // Honor an email nudge's deep link (/play?turn=<id>): auto-open that turn
-      // if it's still pending, else fall back to the list (NOTIF-04).
-      const turnParam = new URLSearchParams(window.location.search).get('turn');
-      setActive(
-        turnParam ? (pend.find((t) => t.id === turnParam) ?? null) : null,
-      );
-    });
+    fetchAuthSession()
+      .then(async (s) => {
+        if (!s.me) {
+          router.replace('/signin');
+          return;
+        }
+        setMe(s.me);
+        setFriends(s.friends);
+        setResult('');
+        setWrong(false);
+        const pend = await refresh(s.me.id);
+        // Honor an email nudge's deep link (/play?turn=<id>): auto-open that turn
+        // if it's still pending, else fall back to the list (NOTIF-04).
+        const turnParam = new URLSearchParams(window.location.search).get(
+          'turn',
+        );
+        setActive(
+          turnParam ? (pend.find((t) => t.id === turnParam) ?? null) : null,
+        );
+      })
+      .catch(() => setLoadError(true));
   }, [router, refresh]);
 
   const tiles = useMemo(
@@ -62,21 +70,31 @@ export default function PlayPage() {
 
   const onComplete = useCallback(
     async (guess: string) => {
-      if (!active || !me) return;
-      const updated = await submitGuess(active.id, guess);
-      if (updated.status === 'guessed') {
-        setWrong(false);
+      if (!active || !me || busy) return;
+      setBusy(true);
+      try {
+        const updated = await submitGuess(active.id, guess);
+        if (updated.status === 'guessed') {
+          setWrong(false);
+          setResult(
+            `Correct! +${updated.pointsAwarded} point 🎉 (it was "${active.word}")`,
+          );
+          setReplyGame(active.gameId);
+          setActive(null);
+          await refresh(me.id).catch(() => setLoadError(true));
+        } else {
+          setWrong(true);
+          setResult('Not quite — try again.');
+        }
+      } catch {
         setResult(
-          `Correct! +${updated.pointsAwarded} point 🎉 (it was "${active.word}")`,
+          'Couldn’t check your guess. Tap an answer letter and try again.',
         );
-        setActive(null);
-        await refresh(me.id);
-      } else {
-        setWrong(true);
-        setResult('Not quite — try again.');
+      } finally {
+        setBusy(false);
       }
     },
-    [active, me, refresh],
+    [active, me, refresh, busy],
   );
 
   // Dismiss the wrong-state as soon as the player edits their guess again.
@@ -86,88 +104,150 @@ export default function PlayPage() {
   }, []);
 
   const onGiveUp = useCallback(async () => {
-    if (!active || !me) return;
-    const updated = await giveUp(active.id);
-    setResult(`The word was "${updated.word}". No points this time.`);
-    setActive(null);
-    setWrong(false);
-    await refresh(me.id);
-  }, [active, me, refresh]);
+    if (!active || !me || busy) return;
+    setBusy(true);
+    try {
+      const updated = await giveUp(active.id);
+      setResult(`The word was "${updated.word}". No points this time.`);
+      setReplyGame(active.gameId);
+      setActive(null);
+      setWrong(false);
+      await refresh(me.id).catch(() => setLoadError(true));
+    } catch {
+      setResult('Couldn’t reveal the word. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }, [active, me, refresh, busy]);
+
+  const opponentName = (gameId: string) =>
+    friends.find((f) => f.gameId === gameId)?.opponent.displayName ??
+    'a friend';
 
   return (
-    <main className="mx-auto flex max-w-xl flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Guess</h1>
-        <nav className="flex flex-wrap gap-4 text-sm">
-          <Link href="/friends" className="text-blue-600 underline">
-            Invite a friend
-          </Link>
-          <Link href="/draw" className="text-blue-600 underline">
-            Draw →
-          </Link>
-          <Link href="/scores" className="text-blue-600 underline">
-            Scores
-          </Link>
-        </nav>
-      </div>
-
-      {me && (
-        <p className="text-sm text-gray-500">
-          You are <strong>{me.displayName}</strong>. {pending.length} drawing(s)
-          waiting.
-        </p>
-      )}
-
-      {me && friends.length === 0 && pending.length === 0 && (
-        <p className="text-sm text-gray-500">
-          You have no friends yet. Invite a friend to start playing.
-        </p>
-      )}
-
-      {!active && (
-        <ul className="flex flex-col gap-2">
-          {pending.map((t) => (
-            <li key={t.id}>
-              <button
-                type="button"
-                className="w-full rounded border px-3 py-2 text-left hover:bg-gray-50"
-                onClick={() => {
-                  setActive(t);
-                  setResult('');
-                  setWrong(false);
-                }}
-              >
-                A drawing to guess from{' '}
-                {friends.find((f) => f.gameId === t.gameId)?.opponent
-                  .displayName ?? 'a friend'}{' '}
-                ({t.word.replace(/\s+/g, '').length} letters)
-              </button>
-            </li>
-          ))}
-          {pending.length === 0 && friends.length > 0 && (
-            <li className="text-sm text-gray-400">Nothing to guess yet.</li>
-          )}
-        </ul>
-      )}
-
-      {active && (
-        <div className="flex flex-col gap-3">
-          <p className="text-sm text-gray-500">
-            Drawing from{' '}
-            {friends.find((f) => f.gameId === active.gameId)?.opponent
-              .displayName ?? 'a friend'}
-          </p>
+    <GameShell
+      title={active ? 'What could it be?' : 'A little mystery.'}
+      eyebrow="The guessing room"
+      current="/play"
+    >
+      {loadError && (
+        <div className="notice notice-error" role="alert">
+          We couldn’t load your latest drawings.{' '}
           <button
-            type="button"
-            className="self-start text-sm text-blue-600 underline"
-            onClick={() => {
-              setActive(null);
-              setResult('');
-              setWrong(false);
-            }}
+            className="text-link"
+            onClick={() => window.location.reload()}
           >
-            All drawings
+            Try again
           </button>
+        </div>
+      )}
+      {!me && !loadError && (
+        <p className="notice" role="status">
+          Opening your drawings…
+        </p>
+      )}
+      {result && (
+        <div
+          className={`notice ${wrong ? 'notice-error' : replyGame ? 'notice-success' : ''}`}
+          role="status"
+        >
+          <p>{result}</p>
+          {replyGame && (
+            <Link
+              className="button"
+              href={`/draw?game=${encodeURIComponent(replyGame)}`}
+            >
+              Draw something back <span aria-hidden="true">↗</span>
+            </Link>
+          )}
+        </div>
+      )}
+      {me && !active && (
+        <>
+          <p className="page-description">
+            {pending.length
+              ? `${pending.length} drawing${pending.length === 1 ? '' : 's'} waiting for your best guess.`
+              : 'All caught up. A blank page is a good place to start.'}
+          </p>
+          <ul className="pending-list">
+            {pending.map((t) => (
+              <li key={t.id}>
+                <button
+                  type="button"
+                  className="pending-card"
+                  aria-label={`A drawing to guess from ${opponentName(t.gameId)} (${t.word.replace(/\s+/g, '').length} letters)`}
+                  onClick={() => {
+                    setActive(t);
+                    setResult('');
+                    setWrong(false);
+                    setReplyGame(null);
+                  }}
+                >
+                  <span className="avatar avatar-0" aria-hidden="true">
+                    {opponentName(t.gameId).slice(0, 1).toUpperCase()}
+                  </span>
+                  <span>
+                    <strong>{opponentName(t.gameId)}</strong>
+                    <small>
+                      {t.word.replace(/\s+/g, '').length} letters · ready to
+                      guess
+                    </small>
+                  </span>
+                  <span className="pending-arrow" aria-hidden="true">
+                    ↗
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {pending.length === 0 && (
+            <div className="empty-panel">
+              <span className="empty-mark" aria-hidden="true">
+                ✳
+              </span>
+              <h2>
+                {friends.length
+                  ? 'Your next masterpiece awaits.'
+                  : 'A game is better with a friend.'}
+              </h2>
+              <p>
+                {friends.length
+                  ? 'Send a drawing while you wait for one to come your way.'
+                  : 'Invite someone to start swapping drawings.'}
+              </p>
+              <Link
+                className="button"
+                href={friends.length ? '/draw' : '/friends'}
+              >
+                {friends.length ? 'Draw something' : 'Invite someone to play'}
+              </Link>
+            </div>
+          )}
+        </>
+      )}
+      {active && (
+        <section className="guess-workspace" aria-label="Guess this drawing">
+          <div className="recipient-row">
+            <span className="avatar avatar-0" aria-hidden="true">
+              {opponentName(active.gameId).slice(0, 1).toUpperCase()}
+            </span>
+            <div className="recipient-picker">
+              <span className="eyebrow">A drawing from</span>
+              <strong>{opponentName(active.gameId)}</strong>
+            </div>
+            <button
+              type="button"
+              className="text-link"
+              disabled={busy}
+              onClick={() => {
+                setActive(null);
+                setResult('');
+                setWrong(false);
+              }}
+            >
+              All drawings
+            </button>
+          </div>
           <DrawingReplay drawing={active.strokes} />
           <LetterTiles
             key={active.id}
@@ -176,18 +256,23 @@ export default function PlayPage() {
             onComplete={onComplete}
             wrong={wrong}
             onChange={onEdit}
+            disabled={busy}
           />
+          {busy && (
+            <p role="status" className="field-hint">
+              Checking…
+            </p>
+          )}
           <button
             type="button"
+            className="text-link reveal-button"
+            disabled={busy}
             onClick={onGiveUp}
-            className="self-start rounded border px-3 py-1 text-sm text-gray-600"
           >
             Give up / reveal
           </button>
-        </div>
+        </section>
       )}
-
-      {result && <p className="text-sm font-medium text-green-700">{result}</p>}
-    </main>
+    </GameShell>
   );
 }

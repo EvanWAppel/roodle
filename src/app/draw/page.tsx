@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { GameShell } from '@/components/GameShell';
 import { DrawCanvas } from '@/components/DrawCanvas';
 import { pickRandomWord } from '@/lib/words';
 import {
@@ -35,6 +36,8 @@ async function offerWord(gameId: string, exclude?: string): Promise<string> {
 
 export default function DrawPage() {
   const router = useRouter();
+  const drafts = useRef(new Map<string, { word: string; drawing: Drawing }>());
+  const [loadError, setLoadError] = useState(false);
   const [me, setMe] = useState<Person | null>(null);
   const [friends, setFriends] = useState<FriendInfo[]>([]);
   const [friendIndex, setFriendIndex] = useState(0);
@@ -45,19 +48,21 @@ export default function DrawPage() {
   const [status, setStatus] = useState<string>('');
 
   useEffect(() => {
-    fetchAuthSession().then((s) => {
-      if (!s.me) {
-        router.replace('/signin');
-        return;
-      }
-      setMe(s.me);
-      setFriends(s.friends);
-      const gameId = new URLSearchParams(window.location.search).get('game');
-      const selected = s.friends.findIndex(
-        (friend) => friend.gameId === gameId,
-      );
-      setFriendIndex(selected >= 0 ? selected : 0);
-    });
+    fetchAuthSession()
+      .then((s) => {
+        if (!s.me) {
+          router.replace('/signin');
+          return;
+        }
+        setMe(s.me);
+        setFriends(s.friends);
+        const gameId = new URLSearchParams(window.location.search).get('game');
+        const selected = s.friends.findIndex(
+          (friend) => friend.gameId === gameId,
+        );
+        setFriendIndex(selected >= 0 ? selected : 0);
+      })
+      .catch(() => setLoadError(true));
   }, [router]);
 
   const opponent = friends[friendIndex];
@@ -66,10 +71,13 @@ export default function DrawPage() {
   // opponent. Runs on the client (after mount) to avoid an SSR hydration
   // mismatch from Math.random, and re-offers when switching opponents.
   useEffect(() => {
-    if (!opponent) return;
+    if (!opponent || drafts.current.has(opponent.gameId)) return;
     let active = true;
     offerWord(opponent.gameId).then((w) => {
-      if (active) setWord(w);
+      if (active) {
+        setWord(w);
+        drafts.current.set(opponent.gameId, { word: w, drawing: [] });
+      }
     });
     return () => {
       active = false;
@@ -95,9 +103,12 @@ export default function DrawPage() {
       setStatus(
         `Sent to ${opponent.opponent.displayName}! Pick a new word to draw again.`,
       );
+      drafts.current.delete(opponent.gameId);
       setDrawing([]);
       setCanvasVersion((version) => version + 1);
-      setWord(await offerWord(opponent.gameId, word));
+      const next = await offerWord(opponent.gameId, word);
+      setWord(next);
+      drafts.current.set(opponent.gameId, { word: next, drawing: [] });
     } catch {
       setStatus('Could not send your drawing. Please try again.');
     } finally {
@@ -110,99 +121,122 @@ export default function DrawPage() {
     setBusy(true);
     setDrawing([]);
     setCanvasVersion((version) => version + 1);
-    setWord(await offerWord(opponent.gameId, word));
+    const next = await offerWord(opponent.gameId, word);
+    setWord(next);
+    drafts.current.set(opponent.gameId, { word: next, drawing: [] });
     setBusy(false);
   }, [opponent, word, busy]);
 
   return (
-    <main className="mx-auto flex max-w-xl flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Draw</h1>
-        <nav className="flex flex-wrap gap-4 text-sm">
-          <Link href="/friends" className="text-blue-600 underline">
-            Invite a friend
-          </Link>
-          <Link href="/play" className="text-blue-600 underline">
-            Guess →
-          </Link>
-          <Link href="/packs" className="text-blue-600 underline">
-            Packs
-          </Link>
-          <Link href="/scores" className="text-blue-600 underline">
-            Scores
-          </Link>
-        </nav>
-      </div>
-
-      {me && friends.length === 0 && (
-        <p className="text-sm text-gray-500">
-          You have no friends yet. Invite a friend to start playing.
-        </p>
-      )}
-
-      {me && friends.length > 1 && (
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-gray-500">Draw for:</span>
-          <select
-            value={friendIndex}
-            disabled={busy}
-            onChange={(e) => {
-              setFriendIndex(Number(e.target.value));
-              setWord('');
-              setDrawing([]);
-              setStatus('');
-            }}
-            className="rounded border px-2 py-1"
+    <GameShell
+      title="Make your mark."
+      eyebrow="The drawing table"
+      current="/draw"
+    >
+      {loadError && (
+        <div className="notice notice-error" role="alert">
+          We couldn’t load your games.{' '}
+          <button
+            className="text-link"
+            onClick={() => window.location.reload()}
           >
-            {friends.map((f, i) => (
-              <option key={f.opponent.id} value={i}>
-                {f.opponent.displayName}
-              </option>
-            ))}
-          </select>
-        </label>
+            Try again
+          </button>
+        </div>
       )}
-
-      {me && opponent && (
-        <p className="text-sm text-gray-500">
-          You are <strong>{me.displayName}</strong>, drawing for{' '}
-          <strong>{opponent.opponent.displayName}</strong>.
+      {!me && !loadError && (
+        <p className="notice" role="status">
+          Getting your pencil box ready…
         </p>
       )}
-
+      {me && friends.length === 0 && (
+        <div className="empty-panel">
+          <h2>Good drawings need good company.</h2>
+          <p>Invite someone and start your first drawing together.</p>
+          <Link className="button" href="/friends">
+            Find a friend to play with
+          </Link>
+        </div>
+      )}
       {opponent && (
         <>
-          <div className="flex items-center gap-3">
-            <span className="text-lg">
-              Draw: <strong className="tracking-wide">{word || '…'}</strong>
+          <div className="recipient-row">
+            <span className="avatar avatar-0" aria-hidden="true">
+              {opponent.opponent.displayName.slice(0, 1).toUpperCase()}
             </span>
+            <label className="recipient-picker">
+              <span className="eyebrow">Draw for</span>
+              <select
+                aria-label="Draw for"
+                value={friendIndex}
+                disabled={busy}
+                onChange={(e) => {
+                  const index = Number(e.target.value);
+                  const saved = drafts.current.get(friends[index].gameId);
+                  setFriendIndex(index);
+                  setWord(saved?.word ?? '');
+                  setDrawing(saved?.drawing ?? []);
+                  setStatus('');
+                }}
+              >
+                {friends.map((f, i) => (
+                  <option key={f.gameId} value={i}>
+                    {f.opponent.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Link className="text-link" href="/packs">
+              Word packs
+            </Link>
+          </div>
+          <div className="word-prompt">
+            <div>
+              <span className="eyebrow">Your word</span>
+              <h2>{word || 'Choosing…'}</h2>
+            </div>
             <button
-              type="button"
-              className="rounded border px-2 py-1 text-sm"
+              className="tool-button"
               onClick={newWord}
               disabled={busy || !word}
             >
-              New word
+              New word <span aria-hidden="true">↻</span>
             </button>
           </div>
-
           <DrawCanvas
             key={`${opponent.gameId}:${canvasVersion}`}
-            onChange={setDrawing}
+            initialDrawing={drawing}
+            disabled={busy || !word}
+            onChange={(next) => {
+              setDrawing(next);
+              drafts.current.set(opponent.gameId, { word, drawing: next });
+            }}
           />
-
-          <button
-            type="button"
-            disabled={!canSubmit}
-            onClick={submit}
-            className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-40"
-          >
-            Submit drawing
-          </button>
+          <div className="send-panel">
+            <p>
+              {busy ? 'One moment…' : 'A little imperfect is a lot more fun.'}
+            </p>
+            <button
+              className="button"
+              type="button"
+              aria-label="Submit drawing"
+              disabled={!canSubmit}
+              onClick={submit}
+            >
+              {busy ? 'Sending…' : 'Send drawing'}{' '}
+              <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+          <p className="field-hint">
+            Switch friends freely. Drafts stay here until you leave this page.
+          </p>
         </>
       )}
-
-      {status && <p className="text-sm text-green-700">{status}</p>}
-    </main>
+      {status && (
+        <p className="notice" role="status">
+          {status}
+        </p>
+      )}
+    </GameShell>
   );
 }

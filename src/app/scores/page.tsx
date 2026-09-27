@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { GameShell } from '@/components/GameShell';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/db/client';
 import { getCurrentUser } from '@/auth/currentUser';
@@ -17,7 +18,7 @@ export const dynamic = 'force-dynamic';
 
 function StatCard({ name, stats }: { name: string; stats: PlayerStats }) {
   return (
-    <div className="rounded-lg border p-4">
+    <div className="stat-panel">
       <h3 className="mb-2 text-lg font-semibold">{name}</h3>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
         <dt className="text-gray-500">Points</dt>
@@ -53,19 +54,11 @@ export default async function ScoresPage() {
   );
 
   return (
-    <main className="mx-auto flex max-w-xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Scores</h1>
-        <nav className="flex gap-4 text-sm">
-          <Link href="/draw" className="text-blue-600 underline">
-            Draw
-          </Link>
-          <Link href="/play" className="text-blue-600 underline">
-            Guess
-          </Link>
-        </nav>
-      </div>
-
+    <GameShell
+      title="A little friendly rivalry."
+      eyebrow="Your shared story"
+      current="/scores"
+    >
       <section>
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
           Your stats
@@ -84,16 +77,13 @@ export default async function ScoresPage() {
       )}
 
       {games.map(({ opponent, board, history }) => (
-        <section key={opponent.id} className="flex flex-col gap-3">
+        <section key={opponent.id} className="score-section">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
             vs {opponent.displayName}
           </h2>
           <ol className="flex flex-col gap-1">
             {board.map((row: ScoreRow, i) => (
-              <li
-                key={row.playerId}
-                className="flex items-center justify-between rounded border px-3 py-2"
-              >
+              <li key={row.playerId} className="history-row">
                 <span>
                   {i === 0 && board.length > 1 && row.points > 0 ? '👑 ' : ''}
                   {row.displayName}
@@ -109,10 +99,7 @@ export default async function ScoresPage() {
               <li className="text-gray-400">No rounds finished yet.</li>
             )}
             {history.map((h: HistoryRow) => (
-              <li
-                key={h.turnId}
-                className="flex items-center justify-between rounded border px-3 py-2"
-              >
+              <li key={h.turnId} className="history-row">
                 <span>
                   <strong>{h.guesserName}</strong>{' '}
                   {h.status === 'guessed' ? 'guessed' : 'gave up on'}{' '}
@@ -126,6 +113,6 @@ export default async function ScoresPage() {
           </ul>
         </section>
       ))}
-    </main>
+    </GameShell>
   );
 }

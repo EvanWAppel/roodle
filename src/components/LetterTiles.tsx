@@ -11,6 +11,7 @@ export interface LetterTilesProps {
   onComplete: (guess: string) => void;
   /** When true, the assembled guess was wrong: blanks show a "wrong" visual state. */
   wrong?: boolean;
+  disabled?: boolean;
   /** Called whenever the blanks change (place or clear), e.g. to dismiss wrong feedback. */
   onChange?: () => void;
 }
@@ -27,10 +28,13 @@ export function LetterTiles({
   length,
   onComplete,
   wrong = false,
+  disabled = false,
   onChange,
 }: LetterTilesProps) {
   // Each blank holds the tray index of the tile placed in it, or null.
-  const [slots, setSlots] = useState<(number | null)[]>(() => Array(length).fill(null));
+  const [slots, setSlots] = useState<(number | null)[]>(() =>
+    Array(length).fill(null),
+  );
 
   const usedTileIndexes = new Set(slots.filter((s): s is number => s !== null));
 
@@ -43,7 +47,10 @@ export function LetterTiles({
     onChange?.();
 
     if (next.every((s) => s !== null)) {
-      const guess = next.map((s) => tiles[s as number]).join('').toUpperCase();
+      const guess = next
+        .map((s) => tiles[s as number])
+        .join('')
+        .toUpperCase();
       onComplete(guess);
     }
   }
@@ -57,16 +64,13 @@ export function LetterTiles({
   }
 
   return (
-    <div>
+    <div className="letter-board">
+      <p className="eyebrow">Your guess</p>
       <div
         role="group"
         aria-label="answer"
         data-wrong={wrong}
-        style={{
-          display: 'flex',
-          gap: '0.5rem',
-          color: wrong ? '#b91c1c' : undefined,
-        }}
+        className="answer-slots"
       >
         {slots.map((tileIndex, i) => {
           const filled = tileIndex !== null;
@@ -79,8 +83,8 @@ export function LetterTiles({
               data-wrong={wrong}
               aria-label={filled ? letter : `blank ${i + 1}`}
               onClick={() => clearSlot(i)}
-              disabled={!filled}
-              style={wrong ? { borderColor: '#b91c1c' } : undefined}
+              disabled={!filled || disabled}
+              className="letter-tile answer-tile"
             >
               {letter || '_'}
             </button>
@@ -88,7 +92,10 @@ export function LetterTiles({
         })}
       </div>
 
-      <div role="group" aria-label="tiles" style={{ display: 'flex', gap: '0.5rem' }}>
+      <p className="field-hint">
+        Tap letters to guess. Tap your answer to undo.
+      </p>
+      <div role="group" aria-label="tiles" className="tile-tray">
         {tiles.map((letter, i) => {
           const used = usedTileIndexes.has(i);
           return (
@@ -98,7 +105,8 @@ export function LetterTiles({
               data-role="tile"
               aria-label={letter}
               onClick={() => placeTile(i)}
-              disabled={used}
+              disabled={used || disabled}
+              className="letter-tile"
             >
               {letter}
             </button>

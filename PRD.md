@@ -359,3 +359,18 @@ Visual studies are reviewable artifacts, not a new approval gate. Track incomple
 work explicitly in TASKS.md. Success is a coherent first impression and a clear,
 one-step route from the hub to each game's next action, with no loss of private
 state or the simple, ad-free character of Roodle.
+
+
+### Mobile implementation detail (2026-09-26)
+The game rooms prioritize phones: bottom navigation with safe-area spacing,
+44px-or-larger drawing and tile controls, 16px email/form inputs, a responsive
+4:3 canvas using the original 400×300 drawing coordinate system, and a fixed send
+action above the phone navigation. Replay uses the same aspect ratio as drawing.
+Letter tiles wrap for long words. Reduced-motion users see the final drawing
+immediately. Success links return to the same friend's drawing game.
+
+Draft lifetime for this increment: separate word/stroke drafts live in the
+mounted drawing page, keyed by game. Switching its friend selector restores each
+draft. Successful sends clear that draft. Leaving/reloading the page or signing
+out discards all drafts, avoiding cross-account storage. The UI states this limit;
+reload/offline persistence is a later enhancement, not implied by this feature.

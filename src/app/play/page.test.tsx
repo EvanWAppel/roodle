@@ -42,7 +42,9 @@ const turn: TurnDTO = {
 async function openTurn() {
   render(<PlayPage />);
   // Wait for the pending list to render, then open the turn.
-  const open = await screen.findByRole('button', { name: /a drawing to guess/i });
+  const open = await screen.findByRole('button', {
+    name: /a drawing to guess/i,
+  });
   await userEvent.click(open);
   return open;
 }
@@ -60,12 +62,17 @@ describe('PlayPage', () => {
     fetchPending.mockResolvedValueOnce([turn]).mockResolvedValue([]);
 
     await openTurn();
-    await userEvent.click(screen.getByRole('button', { name: /give up \/ reveal/i }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /give up \/ reveal/i }),
+    );
 
     await waitFor(() =>
       expect(screen.getByText(/the word was "cat"/i)).toBeInTheDocument(),
     );
     expect(giveUp).toHaveBeenCalledWith('turn-1');
+    expect(
+      screen.getByRole('link', { name: /Draw something back/i }),
+    ).toHaveAttribute('href', '/draw?game=game-1');
   });
 
   it('surfaces wrong feedback on an incorrect guess, then clears it on edit (GUESS-03)', async () => {
@@ -76,7 +83,9 @@ describe('PlayPage', () => {
     function trayTile(letter: string): HTMLButtonElement {
       return screen
         .getAllByRole('button', { name: letter })
-        .find((b) => b.getAttribute('data-role') === 'tile') as HTMLButtonElement;
+        .find(
+          (b) => b.getAttribute('data-role') === 'tile',
+        ) as HTMLButtonElement;
     }
 
     // buildTileTray('cat') always contains C, A, T (plus random decoys). We fill
@@ -95,13 +104,19 @@ describe('PlayPage', () => {
     // Editing (clearing a filled blank) dismisses the wrong state.
     const filledBlank = screen
       .getAllByRole('button', { name: 'T' })
-      .find((b) => b.getAttribute('data-role') === 'blank') as HTMLButtonElement;
+      .find(
+        (b) => b.getAttribute('data-role') === 'blank',
+      ) as HTMLButtonElement;
     await userEvent.click(filledBlank);
     await waitFor(() => expect(group).toHaveAttribute('data-wrong', 'false'));
   });
 
   it('reports a correct guess and clears the active turn (GUESS-04 happy path)', async () => {
-    submitGuess.mockResolvedValue({ ...turn, status: 'guessed', pointsAwarded: 1 });
+    submitGuess.mockResolvedValue({
+      ...turn,
+      status: 'guessed',
+      pointsAwarded: 1,
+    });
     fetchPending.mockResolvedValueOnce([turn]).mockResolvedValue([]);
 
     await openTurn();
@@ -109,7 +124,9 @@ describe('PlayPage', () => {
     function trayTile(letter: string): HTMLButtonElement {
       return screen
         .getAllByRole('button', { name: letter })
-        .find((b) => b.getAttribute('data-role') === 'tile') as HTMLButtonElement;
+        .find(
+          (b) => b.getAttribute('data-role') === 'tile',
+        ) as HTMLButtonElement;
     }
 
     await userEvent.click(trayTile('C'));

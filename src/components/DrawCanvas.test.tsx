@@ -95,4 +95,53 @@ describe('DrawCanvas', () => {
     fireEvent.click(screen.getByRole('button', { name: /clear/i }));
     expect(onChange).toHaveBeenCalledWith([]);
   });
+  it('maps phone-sized canvas input back to stored drawing coordinates', () => {
+    const onChange = vi.fn();
+    render(<DrawCanvas onChange={onChange} />);
+    const canvas = getCanvas();
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+      x: 10,
+      y: 20,
+      left: 10,
+      top: 20,
+      width: 200,
+      height: 150,
+      right: 210,
+      bottom: 170,
+      toJSON: () => ({}),
+    });
+    stroke(canvas, [
+      [60, 70],
+      [110, 95],
+    ]);
+    expect(onChange.mock.calls.at(-1)?.[0][0].points).toEqual([
+      { x: 100, y: 100 },
+      { x: 200, y: 150 },
+    ]);
+  });
+  it('restores a saved canvas and allows undoing its last stroke', () => {
+    const onChange = vi.fn();
+    const initialDrawing: Drawing = [
+      { color: '#111827', width: 4, points: [{ x: 10, y: 20 }] },
+    ];
+    render(<DrawCanvas initialDrawing={initialDrawing} onChange={onChange} />);
+    fireEvent.click(screen.getByRole('button', { name: /Undo/i }));
+    expect(onChange).toHaveBeenCalledWith([]);
+    expect(initialDrawing).toHaveLength(1);
+  });
+  it('ignores a second finger while recording a captured stroke', () => {
+    const onChange = vi.fn();
+    render(<DrawCanvas onChange={onChange} />);
+    const canvas = getCanvas();
+    fireEvent.pointerDown(canvas, { pointerId: 1, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(canvas, { pointerId: 2, clientX: 300, clientY: 300 });
+    fireEvent.pointerUp(canvas, { pointerId: 2 });
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 20, clientY: 20 });
+    fireEvent.pointerUp(canvas, { pointerId: 1 });
+    expect(onChange.mock.calls[0][0][0].points).toEqual([
+      { x: 10, y: 10 },
+      { x: 20, y: 20 },
+    ]);
+  });
 });
