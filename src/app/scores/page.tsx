@@ -19,18 +19,18 @@ export const dynamic = 'force-dynamic';
 function StatCard({ name, stats }: { name: string; stats: PlayerStats }) {
   return (
     <div className="stat-panel">
-      <h3 className="mb-2 text-lg font-semibold">{name}</h3>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-        <dt className="text-gray-500">Points</dt>
-        <dd className="text-right font-medium">{stats.points}</dd>
-        <dt className="text-gray-500">Correct guesses</dt>
-        <dd className="text-right font-medium">{stats.correctGuesses}</dd>
-        <dt className="text-gray-500">Current streak</dt>
-        <dd className="text-right font-medium">{stats.currentStreak}</dd>
-        <dt className="text-gray-500">Longest streak</dt>
-        <dd className="text-right font-medium">{stats.longestStreak}</dd>
-        <dt className="text-gray-500">Games</dt>
-        <dd className="text-right font-medium">{stats.gamesPlayed}</dd>
+      <h3>{name}</h3>
+      <dl>
+        <dt>Points</dt>
+        <dd>{stats.points}</dd>
+        <dt>Correct guesses</dt>
+        <dd>{stats.correctGuesses}</dd>
+        <dt>Current streak</dt>
+        <dd>{stats.currentStreak}</dd>
+        <dt>Longest streak</dt>
+        <dd>{stats.longestStreak}</dd>
+        <dt>Games</dt>
+        <dd>{stats.gamesPlayed}</dd>
       </dl>
     </div>
   );
@@ -60,28 +60,27 @@ export default async function ScoresPage() {
       current="/scores"
     >
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Your stats
-        </h2>
+        <p className="eyebrow">Your stats</p>
         <StatCard name={me.displayName} stats={myStats} />
       </section>
 
       {friends.length === 0 && (
-        <p className="text-sm text-gray-500">
-          No games yet.{' '}
-          <Link href="/friends" className="text-blue-600 underline">
+        <div className="empty-panel">
+          <span className="empty-mark" aria-hidden="true">
+            🏆
+          </span>
+          <h2>No games yet.</h2>
+          <p>Your shared story starts with a first round.</p>
+          <Link href="/friends" className="button">
             Invite a friend
-          </Link>{' '}
-          to start playing.
-        </p>
+          </Link>
+        </div>
       )}
 
       {games.map(({ opponent, board, history }) => (
         <section key={opponent.id} className="score-section">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-            vs {opponent.displayName}
-          </h2>
-          <ol className="flex flex-col gap-1">
+          <p className="eyebrow">vs {opponent.displayName}</p>
+          <ol className="score-list">
             {board.map((row: ScoreRow, i) => (
               <li key={row.playerId} className="history-row">
                 <span>
@@ -94,16 +93,16 @@ export default async function ScoresPage() {
               </li>
             ))}
           </ol>
-          <ul className="flex flex-col gap-1 text-sm">
+          <ul className="history-list">
             {history.length === 0 && (
-              <li className="text-gray-400">No rounds finished yet.</li>
+              <li className="history-empty">No rounds finished yet.</li>
             )}
             {history.map((h: HistoryRow) => (
               <li key={h.turnId} className="history-row">
                 <span>
                   <strong>{h.guesserName}</strong>{' '}
                   {h.status === 'guessed' ? 'guessed' : 'gave up on'}{' '}
-                  <span className="font-mono">&ldquo;{h.word}&rdquo;</span>
+                  <span className="history-word">&ldquo;{h.word}&rdquo;</span>
                 </span>
                 <span>
                   {h.status === 'guessed' ? `+${h.pointsAwarded} 🎉` : '—'}

@@ -96,4 +96,54 @@ describe('PacksPage (WORD-06)', () => {
       expect(body).toMatchObject({ gameId: 'game-1', packId: 'p1', enabled: true });
     });
   });
+
+  it('surfaces a load failure with a retry that refetches', async () => {
+    let packsCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url === '/api/auth/session') {
+          return new Response(JSON.stringify(SESSION));
+        }
+        if (url.startsWith('/api/packs?gameId=')) {
+          packsCalls += 1;
+          // Fail the first load, succeed on retry.
+          return packsCalls === 1
+            ? new Response('nope', { status: 500 })
+            : new Response(JSON.stringify(PACKS));
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<PacksPage />);
+
+    const retry = await screen.findByRole('button', { name: /try again/i });
+    await user.click(retry);
+    expect(await screen.findByLabelText('Animals')).toBeInTheDocument();
+  });
+
+  it('shows an error and retry when a toggle fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url === '/api/auth/session') {
+          return new Response(JSON.stringify(SESSION));
+        }
+        if (url.startsWith('/api/packs?gameId=')) {
+          return new Response(JSON.stringify(PACKS));
+        }
+        if (url === '/api/packs/enable') {
+          return new Response('nope', { status: 500 });
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<PacksPage />);
+    await user.click(await screen.findByLabelText('Animals'));
+
+    expect(await screen.findByText(/couldn’t update that pack/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+  });
 });
