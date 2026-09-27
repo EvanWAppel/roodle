@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { GameShell } from '@/components/GameShell';
 import { useRouter } from 'next/navigation';
 import { fetchAuthSession, type FriendInfo } from '@/lib/api';
 
@@ -100,14 +101,11 @@ export default function PacksPage() {
   );
 
   return (
-    <main className="mx-auto flex max-w-xl flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Word packs</h1>
-        <Link href="/draw" className="text-sm text-blue-600 underline">
-          Draw →
-        </Link>
-      </div>
-
+    <GameShell
+      title="Words worth drawing."
+      eyebrow="Your pencil’s next adventure"
+      current="/packs"
+    >
       {friends.length === 0 && (
         <p className="text-sm text-gray-500">
           You have no friends yet.{' '}
@@ -120,7 +118,7 @@ export default function PacksPage() {
 
       {friends.length > 0 && (
         <>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="pack-option">
             <span className="text-gray-500">Packs for game with:</span>
             <select
               aria-label="Game"
@@ -136,9 +134,9 @@ export default function PacksPage() {
             </select>
           </label>
 
-          <ul className="flex flex-col gap-2">
+          <ul className="pack-list">
             {packs.map((p) => (
-              <li key={p.id} className="flex items-center gap-2 text-sm">
+              <li key={p.id} className="pack-option">
                 <input
                   type="checkbox"
                   id={`pack-${p.id}`}
@@ -153,34 +151,35 @@ export default function PacksPage() {
             ))}
           </ul>
 
-          <form onSubmit={createPack} className="flex flex-col gap-2 border-t pt-4">
+          <form onSubmit={createPack} className="form-panel">
             <h2 className="font-semibold">Create a custom pack</h2>
             <input
               aria-label="Pack name"
               placeholder="Pack name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="rounded border px-3 py-2"
+              className="text-field"
             />
             <textarea
               aria-label="Words"
               placeholder="Words, separated by commas or new lines"
               value={wordsText}
               onChange={(e) => setWordsText(e.target.value)}
-              className="rounded border px-3 py-2"
+              className="text-field"
               rows={4}
             />
-            <button
-              type="submit"
-              className="rounded bg-blue-600 px-4 py-2 text-white"
-            >
+            <button type="submit" className="button">
               Create pack
             </button>
           </form>
         </>
       )}
 
-      {status && <p className="text-sm text-gray-700">{status}</p>}
-    </main>
+      {status && (
+        <p className="notice" role="status">
+          {status}
+        </p>
+      )}
+    </GameShell>
   );
 }

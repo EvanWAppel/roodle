@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { GameShell } from '@/components/GameShell';
 import { useRouter } from 'next/navigation';
 
 export default function FriendsPage() {
@@ -51,29 +52,49 @@ export default function FriendsPage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-sm flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Invite a friend</h1>
-        <Link href="/" className="text-sm text-blue-600 underline">
-          Home
-        </Link>
-      </div>
-
+    <GameShell
+      title="Good company starts here."
+      eyebrow="Invite a friend"
+      current="/friends"
+    >
+      <p className="page-description">
+        A drawing, a guess, an inside joke. Make a little room for someone you
+        like.
+      </p>
       {status === 'sent' ? (
-        <div className="flex flex-col gap-2">
-          <p className="text-green-700">Invite sent! They’ll get an email.</p>
+        <div className="form-panel success-panel" role="status">
+          <p className="success-title">Invite sent! They’ll get an email.</p>
+          <p className="field-hint">
+            Sent to {email}. They’ll sign in with that address to join your
+            game.
+          </p>
+          <Link className="button" href="/">
+            Back to your games
+          </Link>
+          <button
+            className="text-link"
+            type="button"
+            onClick={() => {
+              setEmail('');
+              setStatus('idle');
+              setCanResend(false);
+              setDevLink(null);
+            }}
+          >
+            Invite another friend
+          </button>
           {devLink && (
-            <p className="text-xs text-gray-500">
-              Dev link (no email provider wired yet):{' '}
-              <a href={devLink} className="break-all text-blue-600 underline">
+            <p className="field-hint">
+              Development preview link:{' '}
+              <a href={devLink} className="text-link break-all">
                 {devLink}
               </a>
             </p>
           )}
         </div>
       ) : (
-        <form onSubmit={submit} className="flex flex-col gap-3">
-          <label className="text-sm text-gray-600" htmlFor="email">
+        <form onSubmit={submit} className="form-panel">
+          <label className="field-label" htmlFor="email">
             Enter your friend’s email and we’ll send them an invite.
           </label>
           <input
@@ -86,12 +107,16 @@ export default function FriendsPage() {
               setCanResend(false);
             }}
             placeholder="friend@example.com"
-            className="rounded border px-3 py-2"
+            className="text-field"
+            autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            spellCheck={false}
           />
           <button
             type="submit"
             disabled={status === 'sending'}
-            className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+            className="button"
           >
             {status === 'sending'
               ? 'Sending…'
@@ -100,10 +125,12 @@ export default function FriendsPage() {
                 : 'Send invite'}
           </button>
           {status === 'error' && (
-            <p className="text-sm text-red-600">{message}</p>
+            <p className="notice notice-error" role="alert">
+              {message}
+            </p>
           )}
         </form>
       )}
-    </main>
+    </GameShell>
   );
 }

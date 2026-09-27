@@ -45,17 +45,24 @@ describe('PlayPage deep link (NOTIF-04)', () => {
     fetchPending.mockReset();
     fetchAuthSession.mockResolvedValue({
       me,
-      friends: [{ opponent: { id: 'friend-1', displayName: 'Chris' }, gameId: 'g1' }],
+      friends: [
+        { opponent: { id: 'friend-1', displayName: 'Chris' }, gameId: 'g1' },
+      ],
     });
     // Two pending turns with distinguishable letter counts.
-    fetchPending.mockResolvedValue([turn('t-cat', 'cat'), turn('t-elephant', 'elephant')]);
+    fetchPending.mockResolvedValue([
+      turn('t-cat', 'cat'),
+      turn('t-elephant', 'elephant'),
+    ]);
   });
 
   it('auto-opens the turn named in ?turn=', async () => {
     window.history.replaceState({}, '', '/play?turn=t-elephant');
     render(<PlayPage />);
     // The 8-letter deep-linked turn is active (not the 3-letter one, not the list).
-    await waitFor(() => expect(screen.getByText('blanks:8')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('blanks:8')).toBeInTheDocument(),
+    );
     expect(screen.getByTestId('replay')).toBeInTheDocument();
   });
 
@@ -63,7 +70,9 @@ describe('PlayPage deep link (NOTIF-04)', () => {
     window.history.replaceState({}, '', '/play');
     render(<PlayPage />);
     await waitFor(() =>
-      expect(screen.getByText(/drawing\(s\)\s+waiting/i)).toBeInTheDocument(),
+      expect(
+        screen.getByText(/drawings waiting for your best guess/i),
+      ).toBeInTheDocument(),
     );
     expect(screen.queryByTestId('replay')).not.toBeInTheDocument();
   });

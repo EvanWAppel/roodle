@@ -1,8 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { Drawing } from '@/lib/strokes';
 import { DrawingReplay, orderedPoints } from './DrawingReplay';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe('orderedPoints', () => {
   it('flattens a two-stroke drawing in stroke-then-point order', () => {
@@ -71,6 +76,7 @@ describe('DrawingReplay', () => {
   it('jump-to-final completes immediately, cancelling the animation and firing onDone', async () => {
     const user = userEvent.setup();
     const onDone = vi.fn();
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockReturnValue(123);
     const cancelSpy = vi.spyOn(globalThis, 'cancelAnimationFrame');
     render(<DrawingReplay drawing={drawing} onDone={onDone} />);
 
@@ -94,5 +100,13 @@ describe('DrawingReplay', () => {
     await user.click(screen.getByRole('button', { name: /^replay$/i }));
     // Replay re-arms the animation; eventually it completes again.
     expect(onDone.mock.calls.length).toBeGreaterThanOrEqual(before);
+  });
+  it('shows the final drawing immediately when reduced motion is requested', () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
+    const raf = vi.spyOn(globalThis, 'requestAnimationFrame');
+    const onDone = vi.fn();
+    render(<DrawingReplay drawing={drawing} onDone={onDone} />);
+    expect(onDone).toHaveBeenCalledOnce();
+    expect(raf).not.toHaveBeenCalled();
   });
 });

@@ -31,7 +31,7 @@ export interface DrawingReplayProps {
 export function DrawingReplay({
   drawing,
   width = 400,
-  height = 400,
+  height = 300,
   onDone,
 }: DrawingReplayProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -91,6 +91,7 @@ export function DrawingReplay({
           ctx.lineTo(steps[j].point.x, steps[j].point.y);
           j++;
         }
+        if (j === k + 1) ctx.lineTo(seg.point.x + 0.01, seg.point.y);
         ctx.stroke();
         k = j;
       }
@@ -135,7 +136,10 @@ export function DrawingReplay({
       }
     };
 
-    if (typeof requestAnimationFrame === 'function') {
+    const reduceMotion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduceMotion && typeof requestAnimationFrame === 'function') {
       rafRef.current = requestAnimationFrame(tick);
     } else {
       // Fallback: draw everything at once.
@@ -173,13 +177,19 @@ export function DrawingReplay({
   }, [play, cancelAnim]);
 
   return (
-    <div>
-      <canvas ref={canvasRef} width={width} height={height} />
-      <div>
-        <button type="button" onClick={play}>
+    <div className="replay-panel">
+      <canvas
+        className="drawing-paper"
+        aria-label="Your friend’s drawing"
+        ref={canvasRef}
+        width={width}
+        height={height}
+      />
+      <div className="canvas-actions">
+        <button type="button" className="tool-button" onClick={play}>
           Replay
         </button>
-        <button type="button" onClick={jumpToFinal}>
+        <button type="button" className="tool-button" onClick={jumpToFinal}>
           Jump to final
         </button>
       </div>

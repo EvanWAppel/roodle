@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { GameShell } from '@/components/GameShell';
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -14,46 +15,65 @@ export default function SignInPage() {
     e.preventDefault();
     setStatus('sending');
     setDevLink(null);
-    const res = await fetch('/api/auth/request', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    if (!res.ok) {
+    try {
+      const res = await fetch('/api/auth/request', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        setStatus('error');
+        return;
+      }
+      const data = (await res.json()) as { devLink?: string };
+      setDevLink(data.devLink ?? null);
+      setStatus('sent');
+    } catch {
       setStatus('error');
-      return;
     }
-    const data = (await res.json()) as { devLink?: string };
-    setDevLink(data.devLink ?? null);
-    setStatus('sent');
   }
 
   return (
-    <main className="mx-auto flex max-w-sm flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Sign in</h1>
-        <Link href="/" className="text-sm text-blue-600 underline">
-          Home
-        </Link>
-      </div>
-
+    <GameShell
+      title="Your seat at the table."
+      eyebrow="Welcome to Roodle"
+      current="/signin"
+    >
+      <p className="page-description">
+        Sign in with your email. We’ll send you a link, and you’re in. No
+        password to remember.
+      </p>
       {status === 'sent' ? (
-        <div className="flex flex-col gap-2">
-          <p className="text-green-700">
-            Check your email for a sign-in link.
+        <div className="form-panel success-panel" role="status">
+          <p className="success-title">Check your email for a sign-in link.</p>
+          <p className="field-hint">
+            Sent to {email}. Open the link on this device to pick up your games.
           </p>
+          <button
+            type="button"
+            className="text-link"
+            onClick={() => {
+              setStatus('idle');
+              setDevLink(null);
+            }}
+          >
+            Use another email or try again
+          </button>
+          <Link href="/" className="text-link">
+            Back to Roodle
+          </Link>
           {devLink && (
-            <p className="text-xs text-gray-500">
-              Dev link (no email provider wired yet):{' '}
-              <a href={devLink} className="break-all text-blue-600 underline">
+            <p className="field-hint">
+              Development preview link:{' '}
+              <a href={devLink} className="text-link break-all">
                 {devLink}
               </a>
             </p>
           )}
         </div>
       ) : (
-        <form onSubmit={submit} className="flex flex-col gap-3">
-          <label className="text-sm text-gray-600" htmlFor="email">
+        <form onSubmit={submit} className="form-panel">
+          <label className="field-label" htmlFor="email">
             Enter your email and we&apos;ll send a magic link.
           </label>
           <input
@@ -63,22 +83,26 @@ export default function SignInPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="rounded border px-3 py-2"
+            className="text-field"
+            autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            spellCheck={false}
           />
           <button
             type="submit"
             disabled={status === 'sending'}
-            className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+            className="button"
           >
             {status === 'sending' ? 'Sending…' : 'Send magic link'}
           </button>
           {status === 'error' && (
-            <p className="text-sm text-red-600">
+            <p className="notice notice-error" role="alert">
               That didn&apos;t work — check the email and try again.
             </p>
           )}
         </form>
       )}
-    </main>
+    </GameShell>
   );
 }

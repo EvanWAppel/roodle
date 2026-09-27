@@ -251,7 +251,7 @@ older Vercel scaffold tasks above are historical and not redesign prerequisites.
   sequence, privacy constraints, and acceptance criteria in PRD and TASKS.
 - [x] **DESIGN-02** Create reviewable hub and drawing studio visual studies for
   desktop (1440px) and phone (390px). Check hierarchy, spacing, and 320px overflow.
-- [ ] **DESIGN-03** Implement ivory/charcoal/vermilion tokens, Geist typography,
+- [x] **DESIGN-03** Implement ivory/charcoal/vermilion tokens, Geist typography,
   Roodle wordmark, shared navigation, buttons, fields, cards, focus and reduced
   motion foundations. Verify responsive layout and navigation semantics.
 - [x] **DESIGN-04** Build authenticated game hub with one card per friend,
@@ -259,13 +259,13 @@ older Vercel scaffold tasks above are historical and not redesign prerequisites.
   recipient isolation, signed-out behavior, and no-games state.
 - [ ] **DESIGN-05** Show only the user's pending invitations, with expiry-aware
   labels and resend recovery. Test ownership, expired invites, and delivery errors.
-- [ ] **DESIGN-06** Redesign drawing studio: responsive canvas, grouped palette,
+- [x] **DESIGN-06** Redesign drawing studio: responsive canvas, grouped palette,
   visual brush sizes, selected tools, recipient/prompt/send hierarchy. Test pointer
   coordinate scaling and existing tools; inspect mobile and desktop rendering.
-- [ ] **DESIGN-07** Preserve word/stroke drafts independently per friend. Define
+- [x] **DESIGN-07** Preserve word/stroke drafts independently per friend. Define
   storage lifetime and account isolation; clear sent drafts. Test switching away
   and back, submission failure, success, and sign-out/account changes.
-- [ ] **DESIGN-08** Polish replay, tactile tiles, wrong/success feedback and
+- [x] **DESIGN-08** Polish replay, tactile tiles, wrong/success feedback and
   reduced-motion behavior. Add Draw something back for the correct opponent.
   Test correct, incorrect, give-up, deep links, and keyboard operation.
 - [ ] **DESIGN-09** Restyle sign-in, invitations, word packs and scores using
@@ -303,3 +303,32 @@ older Vercel scaffold tasks above are historical and not redesign prerequisites.
     verified with no browser console errors. Full regression remains DESIGN-13.
   - Next: pending invitation cards (DESIGN-05), drawing studio (DESIGN-06),
     and independent drafts (DESIGN-07).
+
+
+- 2026-09-26, phone-first interior redesign:
+  - Added shared game-room navigation, safe-area-aware phone tabs, compact room
+    headings, form panels, and consistent status/error feedback.
+  - Drawing now scales accurately on phones, captures one pointer at a time,
+    supports single-tap dots, and keeps send within thumb reach. Undo, eraser,
+    palette, and brush sizes have larger targets and explicit selected states.
+  - Per-friend word/stroke drafts are page-local: preserved across friend
+    switching, cleared on successful send or page unmount. Reload/offline
+    persistence remains outside this increment; the UI states this limitation.
+  - Guessing uses matching canvas proportions, wrapping tactile tiles,
+    reduced-motion replay, and a reply link to the correct game. Failed guesses
+    and reveals recover without blocking the controls.
+  - Sign-in, invitations, packs, and scores use the new visual system. Remaining
+    DESIGN-09 work includes comprehensive packs loading/retry state coverage.
+  - Fixed native loading of PGlite's WASM assets so isolated local UI fixtures
+    can run through real sign-in and game APIs during browser QA.
+  - Browser QA uses fictional local accounts, never production games: verified
+    canvas input, separate/restored drafts, long-word wrapping, correct guessing
+    and reply routing, and 320/390px phone plus desktop layouts.
+
+  - DESIGN-03/06/07/08 complete for this increment. Component tests cover phone
+    coordinate mapping, second-pointer rejection, restoring an initial canvas,
+    friend draft restoration, failed sends, account/page isolation, reduced motion,
+    keyboard tiles, and reply destinations. Production Webpack build, lint, and
+    TypeScript pass. Whole-suite regression is run before publishing.
+  - Release validation: all 232 tests across 42 files passed; full lint,
+    TypeScript, and production build passed. Phone preview console was clean.

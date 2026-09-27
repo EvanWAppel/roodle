@@ -21,7 +21,13 @@ describe('LetterTiles', () => {
   it('calls onComplete once with the assembled uppercase word when all blanks fill', async () => {
     const user = userEvent.setup();
     const onComplete = vi.fn<(guess: string) => void>();
-    render(<LetterTiles tiles={['T', 'A', 'C', 'X']} length={3} onComplete={onComplete} />);
+    render(
+      <LetterTiles
+        tiles={['T', 'A', 'C', 'X']}
+        length={3}
+        onComplete={onComplete}
+      />,
+    );
 
     await user.click(trayTile('C'));
     await user.click(trayTile('A'));
@@ -34,7 +40,13 @@ describe('LetterTiles', () => {
   it('does not call onComplete before every blank is filled', async () => {
     const user = userEvent.setup();
     const onComplete = vi.fn<(guess: string) => void>();
-    render(<LetterTiles tiles={['T', 'A', 'C', 'X']} length={3} onComplete={onComplete} />);
+    render(
+      <LetterTiles
+        tiles={['T', 'A', 'C', 'X']}
+        length={3}
+        onComplete={onComplete}
+      />,
+    );
 
     await user.click(trayTile('C'));
     await user.click(trayTile('A'));
@@ -45,7 +57,13 @@ describe('LetterTiles', () => {
   it('clears a filled blank on tap and returns its tile to the tray for reuse', async () => {
     const user = userEvent.setup();
     const onComplete = vi.fn<(guess: string) => void>();
-    render(<LetterTiles tiles={['T', 'A', 'C', 'X']} length={3} onComplete={onComplete} />);
+    render(
+      <LetterTiles
+        tiles={['T', 'A', 'C', 'X']}
+        length={3}
+        onComplete={onComplete}
+      />,
+    );
 
     // Fill first blank with X by mistake.
     await user.click(trayTile('X'));
@@ -69,7 +87,13 @@ describe('LetterTiles', () => {
 
   it('does not surface wrong feedback by default', () => {
     const onComplete = vi.fn<(guess: string) => void>();
-    render(<LetterTiles tiles={['T', 'A', 'C', 'X']} length={3} onComplete={onComplete} />);
+    render(
+      <LetterTiles
+        tiles={['T', 'A', 'C', 'X']}
+        length={3}
+        onComplete={onComplete}
+      />,
+    );
     const group = screen.getByRole('group', { name: 'answer' });
     expect(group).toHaveAttribute('data-wrong', 'false');
   });
@@ -77,7 +101,12 @@ describe('LetterTiles', () => {
   it('surfaces wrong feedback on the answer group when wrong is set', () => {
     const onComplete = vi.fn<(guess: string) => void>();
     render(
-      <LetterTiles tiles={['T', 'A', 'C', 'X']} length={3} onComplete={onComplete} wrong />,
+      <LetterTiles
+        tiles={['T', 'A', 'C', 'X']}
+        length={3}
+        onComplete={onComplete}
+        wrong
+      />,
     );
     const group = screen.getByRole('group', { name: 'answer' });
     expect(group).toHaveAttribute('data-wrong', 'true');
@@ -95,7 +124,13 @@ describe('LetterTiles', () => {
     const user = userEvent.setup();
     const onComplete = vi.fn<(guess: string) => void>();
     // "TOOT": two O's and two T's.
-    render(<LetterTiles tiles={['T', 'O', 'O', 'T']} length={4} onComplete={onComplete} />);
+    render(
+      <LetterTiles
+        tiles={['T', 'O', 'O', 'T']}
+        length={4}
+        onComplete={onComplete}
+      />,
+    );
 
     await user.click(trayTile('T', 0));
     await user.click(trayTile('O', 0));
@@ -104,5 +139,21 @@ describe('LetterTiles', () => {
 
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(onComplete).toHaveBeenCalledWith('TOOT');
+  });
+  it('supports guessing with keyboard-activated tiles', async () => {
+    const onComplete = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <LetterTiles
+        tiles={['C', 'A', 'T']}
+        length={3}
+        onComplete={onComplete}
+      />,
+    );
+    for (const letter of ['C', 'A', 'T']) {
+      trayTile(letter).focus();
+      await user.keyboard('{Enter}');
+    }
+    expect(onComplete).toHaveBeenCalledWith('CAT');
   });
 });
