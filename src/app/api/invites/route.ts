@@ -2,8 +2,32 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/db/client';
 import { resolveBaseUrl } from '@/lib/baseUrl';
 import { getCurrentUser } from '@/auth/currentUser';
-import { createInvite, DuplicateInviteError } from '@/auth/invites';
+import {
+  createInvite,
+  listPendingInvites,
+  inviteExpiryLabel,
+  DuplicateInviteError,
+} from '@/auth/invites';
 import { defaultTransport, emailConfigured } from '@/auth/email';
+
+/** GET /api/invites — the signed-in user's outstanding invitations (DESIGN-05). */
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  }
+  const db = await getDb();
+  const now = Date.now();
+  const pending = await listPendingInvites(db, user.id);
+  const invites = pending.map((invite) => ({
+    id: invite.id,
+    inviteeEmail: invite.inviteeEmail,
+    expiresAt: invite.expiresAt.toISOString(),
+    expired: invite.expiresAt.getTime() <= now,
+    label: inviteExpiryLabel(invite.expiresAt, now),
+  }));
+  return NextResponse.json({ invites });
+}
 
 /** POST /api/invites { email } — invite a friend by email (GROUP-02). */
 export async function POST(req: Request) {

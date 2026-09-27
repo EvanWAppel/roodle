@@ -257,8 +257,12 @@ older Vercel scaffold tasks above are historical and not redesign prerequisites.
 - [x] **DESIGN-04** Build authenticated game hub with one card per friend,
   accurate guess/wait/draw states and direct game links. Test multiple friends,
   recipient isolation, signed-out behavior, and no-games state.
-- [ ] **DESIGN-05** Show only the user's pending invitations, with expiry-aware
+- [x] **DESIGN-05** Show only the user's pending invitations, with expiry-aware
   labels and resend recovery. Test ownership, expired invites, and delivery errors.
+  *(Placed on /friends, not the hub — see DECISIONS D14. `listPendingInvites` +
+  `inviteExpiryLabel` in `src/auth/invites.ts`; owner-scoped `GET /api/invites`;
+  friends page lists invites with expiry labels + per-invite resend. Tests cover
+  ownership, expired-but-pending, and 502 delivery errors.)*
 - [x] **DESIGN-06** Redesign drawing studio: responsive canvas, grouped palette,
   visual brush sizes, selected tools, recipient/prompt/send hierarchy. Test pointer
   coordinate scaling and existing tools; inspect mobile and desktop rendering.

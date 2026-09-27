@@ -3,7 +3,7 @@
  * its hash + expiry), email a link, and on accept create the friendship + game
  * between inviter and invitee. Errors are surfaced, never swallowed.
  */
-import { and, eq, lte } from 'drizzle-orm';
+import { and, asc, eq, lte } from 'drizzle-orm';
 import type { DB } from '@/db/client';
 import { invites, type Invite, type Friendship, type Game } from '@/db/schema';
 import { generateToken, hashToken } from './tokens';
@@ -89,6 +89,54 @@ export async function createInvite(
     })
     .returning();
   return { token, invite };
+}
+
+/** A pending invitation the inviter sent, without any secret token material. */
+export interface PendingInvite {
+  id: string;
+  inviteeEmail: string;
+  createdAt: Date;
+  expiresAt: Date;
+}
+
+/**
+ * List the invites this inviter still has outstanding (status `pending`),
+ * soonest-to-expire first (so expired/urgent ones surface at the top). Scoped to
+ * the inviter, so no one sees another user's invites. Past-expiry rows that
+ * haven't been retired yet are included so the caller can label them expired and
+ * offer a resend; the token hash is never returned. Ordering by `expiresAt` is
+ * deterministic here (unlike `createdAt`, which ties within the same tick).
+ */
+export async function listPendingInvites(
+  db: DB,
+  inviterId: string,
+): Promise<PendingInvite[]> {
+  return db
+    .select({
+      id: invites.id,
+      inviteeEmail: invites.inviteeEmail,
+      createdAt: invites.createdAt,
+      expiresAt: invites.expiresAt,
+    })
+    .from(invites)
+    .where(
+      and(eq(invites.inviterId, inviterId), eq(invites.status, 'pending')),
+    )
+    .orderBy(asc(invites.expiresAt));
+}
+
+/**
+ * Human label for an invite's expiry, e.g. "Expires in 3 days" or "Expired".
+ * Pure so it can be unit-tested and rendered identically on server and client.
+ */
+export function inviteExpiryLabel(
+  expiresAt: Date,
+  now: number = Date.now(),
+): string {
+  const ms = expiresAt.getTime() - now;
+  if (ms <= 0) return 'Expired';
+  const days = Math.ceil(ms / (24 * 60 * 60 * 1000));
+  return `Expires in ${days} ${days === 1 ? 'day' : 'days'}`;
 }
 
 export interface AcceptResult {
