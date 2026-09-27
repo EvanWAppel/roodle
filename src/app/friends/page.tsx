@@ -10,6 +10,7 @@ export default function FriendsPage() {
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>(
     'idle',
   );
+  const [canResend, setCanResend] = useState(false);
   const [message, setMessage] = useState('');
   const [devLink, setDevLink] = useState<string | null>(null);
 
@@ -17,27 +18,36 @@ export default function FriendsPage() {
     e.preventDefault();
     setStatus('sending');
     setDevLink(null);
-    const res = await fetch('/api/invites', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    if (res.status === 401) {
-      router.push('/signin');
-      return;
-    }
-    if (!res.ok) {
+    try {
+      const res = await fetch('/api/invites', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, resend: canResend }),
+      });
+      if (res.status === 401) {
+        router.push('/signin');
+        return;
+      }
+      if (!res.ok) {
+        setStatus('error');
+        setCanResend(res.status === 409);
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setMessage(
+          res.status === 409
+            ? 'An invite is already pending. Resend it to get a fresh email link.'
+            : (data?.error ?? 'That didn’t work — please try again.'),
+        );
+        return;
+      }
+      const data = (await res.json()) as { devLink?: string };
+      setDevLink(data.devLink ?? null);
+      setStatus('sent');
+    } catch {
       setStatus('error');
-      setMessage(
-        res.status === 409
-          ? 'You already have a pending invite to that email.'
-          : 'That didn’t work — check the email and try again.',
-      );
-      return;
+      setMessage('Could not connect. Please try again.');
     }
-    const data = (await res.json()) as { devLink?: string };
-    setDevLink(data.devLink ?? null);
-    setStatus('sent');
   }
 
   return (
@@ -71,7 +81,10 @@ export default function FriendsPage() {
             type="email"
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setCanResend(false);
+            }}
             placeholder="friend@example.com"
             className="rounded border px-3 py-2"
           />
@@ -80,7 +93,11 @@ export default function FriendsPage() {
             disabled={status === 'sending'}
             className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
           >
-            {status === 'sending' ? 'Sending…' : 'Send invite'}
+            {status === 'sending'
+              ? 'Sending…'
+              : canResend
+                ? 'Resend invite'
+                : 'Send invite'}
           </button>
           {status === 'error' && (
             <p className="text-sm text-red-600">{message}</p>

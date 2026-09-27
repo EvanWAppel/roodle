@@ -239,4 +239,67 @@ Deepens SLICE-08/09.
 - Run **Check centrally at each merge join**, and an **independent adversarial
   Review on every merge to the main line** (ROCRLL). Record every real trade-off
   in `DECISIONS.md`.
-```
+
+
+## Group DESIGN — Approved creative studio redesign → sequential
+
+Source: PRD §14, approved 2026-09-26. Implement and verify in increments; keep
+unfinished tasks unchecked. Existing production is Railway/Postgres/Resend;
+older Vercel scaffold tasks above are historical and not redesign prerequisites.
+
+- [x] **DESIGN-01** Record the full approved redesign, audience, requirements,
+  sequence, privacy constraints, and acceptance criteria in PRD and TASKS.
+- [x] **DESIGN-02** Create reviewable hub and drawing studio visual studies for
+  desktop (1440px) and phone (390px). Check hierarchy, spacing, and 320px overflow.
+- [ ] **DESIGN-03** Implement ivory/charcoal/vermilion tokens, Geist typography,
+  Roodle wordmark, shared navigation, buttons, fields, cards, focus and reduced
+  motion foundations. Verify responsive layout and navigation semantics.
+- [x] **DESIGN-04** Build authenticated game hub with one card per friend,
+  accurate guess/wait/draw states and direct game links. Test multiple friends,
+  recipient isolation, signed-out behavior, and no-games state.
+- [ ] **DESIGN-05** Show only the user's pending invitations, with expiry-aware
+  labels and resend recovery. Test ownership, expired invites, and delivery errors.
+- [ ] **DESIGN-06** Redesign drawing studio: responsive canvas, grouped palette,
+  visual brush sizes, selected tools, recipient/prompt/send hierarchy. Test pointer
+  coordinate scaling and existing tools; inspect mobile and desktop rendering.
+- [ ] **DESIGN-07** Preserve word/stroke drafts independently per friend. Define
+  storage lifetime and account isolation; clear sent drafts. Test switching away
+  and back, submission failure, success, and sign-out/account changes.
+- [ ] **DESIGN-08** Polish replay, tactile tiles, wrong/success feedback and
+  reduced-motion behavior. Add Draw something back for the correct opponent.
+  Test correct, incorrect, give-up, deep links, and keyboard operation.
+- [ ] **DESIGN-09** Restyle sign-in, invitations, word packs and scores using
+  shared components. Cover loading, empty, error, retry, and success states;
+  preserve auth/invite/packs/score regression tests.
+- [ ] **DESIGN-10** Add private completed-drawing gallery with words and outcomes,
+  secondary scoring, and useful empty states. Test per-game authorization and
+  exclusion of pending answers. Reconcile DRAW-07 and SCORE-04 actual completion.
+- [ ] **DESIGN-11** Add signed-out introduction and isolated optional sample
+  round using labeled fixtures. Test no private data access, game writes, or email.
+- [ ] **DESIGN-12** Finish keyboard, contrast, touch-target and reduced-motion
+  audit; inspect 320/390/1440px layouts, canvas/replay fidelity, and feedback states.
+- [ ] **DESIGN-13** Regression check invites, concurrent games, drafts, drawing,
+  replay, guessing, packs, scores; production build, lint/typecheck, deployment
+  verification, and real-game feedback. Keep completion evidence below.
+
+### Redesign execution log
+
+- 2026-09-26: Full scope recorded. Starting visual studies, design foundations,
+  and game hub. Later phases remain explicitly queued above.
+
+- 2026-09-26, first implementation increment (local, not deployed):
+  - DESIGN-02 complete: `docs/design/hub.html` and `drawing.html` provide
+    responsive studies with explicitly fictional content. Browser review at
+    desktop/390px; 320px overflow checks passed.
+  - DESIGN-03 started: semantic palette, Geist font fix, wordmark, navigation,
+    cards/buttons, focus and reduced-motion foundations implemented. Shared form
+    controls and propagation to remaining screens are still outstanding.
+  - DESIGN-04 complete: real private game cards, incoming/waiting counts,
+    empty-state invitation, and direct friend/turn links. No answers in hub data.
+  - DESIGN-11 started: public introduction implemented; sample round remains.
+  - Validation: 8 focused tests passing across hub data, hub component, home,
+    and drawing selection; changed-file lint and TypeScript pass; production
+    Webpack build passes. Local production homepage → invitation navigation
+    verified with no browser console errors. Full regression remains DESIGN-13.
+  - Next: pending invitation cards (DESIGN-05), drawing studio (DESIGN-06),
+    and independent drafts (DESIGN-07).
