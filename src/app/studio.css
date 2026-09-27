@@ -772,13 +772,45 @@ body {
   border: 1px solid var(--line);
   border-radius: 14px;
 }
+.stat-panel h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
 .stat-panel dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
   row-gap: 12px;
+  column-gap: 16px;
+  font-size: 14px;
+}
+.stat-panel dt {
+  color: var(--muted);
+}
+.stat-panel dd {
+  text-align: right;
+  font-weight: 550;
 }
 .score-section {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+.score-list,
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.history-word {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+.history-empty {
+  color: var(--muted);
+  font-size: 14px;
+  padding: 16px;
 }
 .history-row {
   display: flex;

@@ -272,9 +272,15 @@ older Vercel scaffold tasks above are historical and not redesign prerequisites.
 - [x] **DESIGN-08** Polish replay, tactile tiles, wrong/success feedback and
   reduced-motion behavior. Add Draw something back for the correct opponent.
   Test correct, incorrect, give-up, deep links, and keyboard operation.
-- [ ] **DESIGN-09** Restyle sign-in, invitations, word packs and scores using
+- [x] **DESIGN-09** Restyle sign-in, invitations, word packs and scores using
   shared components. Cover loading, empty, error, retry, and success states;
   preserve auth/invite/packs/score regression tests.
+  *(Sign-in + invitations were already on GameShell/shared components. Packs
+  rewritten onto studio tokens with loading, load-error/retry, toggle-error/retry
+  and structured create success/error — fixing the previous silent `if (!res.ok)
+  return` swallow. Scores swapped raw gray Tailwind for design tokens; `.stat-panel`
+  grid + list/empty styles added to studio.css. 246 tests green, 2 new packs
+  error-path tests.)*
 - [ ] **DESIGN-10** Add private completed-drawing gallery with words and outcomes,
   secondary scoring, and useful empty states. Test per-game authorization and
   exclusion of pending answers. Reconcile DRAW-07 and SCORE-04 actual completion.
