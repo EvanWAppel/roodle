@@ -1,8 +1,8 @@
 # Roodle — Product Requirements Document
 
-**Status:** Draft (interview complete, awaiting sign-off)
+**Status:** Core game live; visual redesign approved 2026-09-26
 **Author:** Evan Appel (with Claude)
-**Last updated:** 2026-09-20
+**Last updated:** 2026-09-26
 
 ---
 
@@ -280,4 +280,82 @@ long-running match), not a one-off round.
   replay smoothness)?
 - **OQ6.** Any content/word filtering needed for custom packs, or fully trusted
   (private friends)?
-```
+
+
+## 14. Approved visual redesign — creative studio (2026-09-26)
+
+### Audience and objective
+Keep the cozy private game for Christine and friends, while presenting a polished
+portfolio experience for recruiters and graphic designers. The visual direction
+is a small creative studio: warm paper, confident typography, expressive drawings,
+and precise controls. Visitors should understand the game immediately; returning
+players should identify the next action and its recipient without hunting menus.
+Existing private games, scores, invitations, and email links must keep working.
+Multiple independent games (e.g. Christine and the tester) are explicitly supported;
+this resolves OQ4. This redesign does not introduce public matchmaking.
+
+### RD-1 — Visual identity and shared design system
+Use warm ivory surfaces, charcoal text, vermilion as the primary accent, and
+restrained secondary colors for art tools. Establish semantic color, spacing,
+radius, typography, focus, and motion tokens. Use the already loaded Geist font
+for interface text instead of Arial. Create a distinctive typographic Roodle
+wordmark with a restrained hand-drawn detail. Player artwork provides the main
+personality. Build consistent navigation, buttons, fields, cards, and feedback.
+
+### RD-2 — Game hub
+Replace the generic signed-in homepage with one card per friend and independent
+game. Display real next-action states: incoming drawings to guess, an outgoing
+drawing awaiting a guess, or a ready-to-draw state. Preserve the ability to draw
+while waiting if the existing game rules allow it; labels must not invent a turn
+restriction. Link directly to the selected friend or pending turn. Show pending
+invitations with expiry-aware status and a resend action. Keep Invite a friend
+permanently available. Empty states should explain how to get started.
+
+### RD-3 — Drawing studio
+Make a generous, responsive canvas the centerpiece. Group the palette and tools,
+show the selected tool, represent brush sizes visually, and keep the recipient,
+word prompt, and send action in predictable positions. Scale pointer coordinates
+correctly when resizing the canvas. Preserve word and drawing drafts separately
+for each friend when switching games; drafts must never be sent to another game.
+Define draft persistence and clear it after successful submission or sign-out.
+Retain ordered vector strokes and compatibility with existing drawing replays.
+
+### RD-4 — Guessing and reward
+Emphasize drawing replay and tactile letter tiles. Provide subtle tile placement
+and brief success motion, honoring reduced-motion preferences. After resolution,
+offer Draw something back linked to the correct friend. Keep a clear route back
+to all games. Make submission, retry, incorrect guess, and give-up states legible.
+
+### RD-5 — Supporting screens and gallery
+Apply the shared visual system to invitations, magic-link sign-in, packs, and
+scores. Use consistent loading, empty, success, and error states with actionable
+copy. Present completed drawings as a private per-game gallery with words and
+outcomes; scores are secondary to the shared creative history. Pending drawings
+and answer words must not leak into public previews or other players' galleries.
+
+### RD-6 — Portfolio introduction and sample round
+Create a concise signed-out introduction explaining async drawing and guessing,
+privacy, and the absence of ads or purchases. Offer an optional sample round
+without sign-in or inviting a real person. Use clearly labeled fixture artwork;
+it must not read or write private games, send email, or imply real users exist.
+
+### RD-7 — Responsive quality and accessibility
+Design phone and desktop layouts deliberately (reference widths 390 and 1440px;
+also check 320px for overflow). Verify keyboard access, visible focus, readable
+contrast, selected states independent of color, approximately 44px touch targets,
+and reduced motion. Avoid layout shifts and keep canvas input accurate on touch.
+Use skeleton/loading feedback where useful and preserve clear recovery on failure.
+
+### Delivery sequence and acceptance
+1. Produce desktop/mobile visual studies for the hub and drawing studio.
+2. Implement shared tokens, identity, navigation, then the real game hub.
+3. Implement the drawing studio and independent friend drafts.
+4. Upgrade guessing, then supporting screens and the gallery.
+5. Add the isolated sample round and finish accessibility/responsive QA.
+6. Run regression checks for concurrent games, invitations, replay, guessing,
+   packs, and scores; verify layouts visually and deploy verified increments.
+
+Visual studies are reviewable artifacts, not a new approval gate. Track incomplete
+work explicitly in TASKS.md. Success is a coherent first impression and a clear,
+one-step route from the hub to each game's next action, with no loss of private
+state or the simple, ad-free character of Roodle.

@@ -45,7 +45,9 @@ export default function PlayPage() {
       // Honor an email nudge's deep link (/play?turn=<id>): auto-open that turn
       // if it's still pending, else fall back to the list (NOTIF-04).
       const turnParam = new URLSearchParams(window.location.search).get('turn');
-      setActive(turnParam ? (pend.find((t) => t.id === turnParam) ?? null) : null);
+      setActive(
+        turnParam ? (pend.find((t) => t.id === turnParam) ?? null) : null,
+      );
     });
   }, [router, refresh]);
 
@@ -64,7 +66,9 @@ export default function PlayPage() {
       const updated = await submitGuess(active.id, guess);
       if (updated.status === 'guessed') {
         setWrong(false);
-        setResult(`Correct! +${updated.pointsAwarded} point 🎉 (it was "${active.word}")`);
+        setResult(
+          `Correct! +${updated.pointsAwarded} point 🎉 (it was "${active.word}")`,
+        );
         setActive(null);
         await refresh(me.id);
       } else {
@@ -94,7 +98,10 @@ export default function PlayPage() {
     <main className="mx-auto flex max-w-xl flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Guess</h1>
-        <nav className="flex gap-4 text-sm">
+        <nav className="flex flex-wrap gap-4 text-sm">
+          <Link href="/friends" className="text-blue-600 underline">
+            Invite a friend
+          </Link>
           <Link href="/draw" className="text-blue-600 underline">
             Draw →
           </Link>
@@ -113,11 +120,7 @@ export default function PlayPage() {
 
       {me && friends.length === 0 && pending.length === 0 && (
         <p className="text-sm text-gray-500">
-          You have no friends yet.{' '}
-          <Link href="/friends" className="text-blue-600 underline">
-            Invite a friend
-          </Link>{' '}
-          to start playing.
+          You have no friends yet. Invite a friend to start playing.
         </p>
       )}
 
@@ -134,7 +137,10 @@ export default function PlayPage() {
                   setWrong(false);
                 }}
               >
-                A drawing to guess ({t.word.replace(/\s+/g, '').length} letters)
+                A drawing to guess from{' '}
+                {friends.find((f) => f.gameId === t.gameId)?.opponent
+                  .displayName ?? 'a friend'}{' '}
+                ({t.word.replace(/\s+/g, '').length} letters)
               </button>
             </li>
           ))}
@@ -146,6 +152,22 @@ export default function PlayPage() {
 
       {active && (
         <div className="flex flex-col gap-3">
+          <p className="text-sm text-gray-500">
+            Drawing from{' '}
+            {friends.find((f) => f.gameId === active.gameId)?.opponent
+              .displayName ?? 'a friend'}
+          </p>
+          <button
+            type="button"
+            className="self-start text-sm text-blue-600 underline"
+            onClick={() => {
+              setActive(null);
+              setResult('');
+              setWrong(false);
+            }}
+          >
+            All drawings
+          </button>
           <DrawingReplay drawing={active.strokes} />
           <LetterTiles
             key={active.id}

@@ -27,7 +27,11 @@ describe('invites service (GROUP-02 / GROUP-03)', () => {
   describe('createInvite', () => {
     it('creates a pending invite storing only the token hash', async () => {
       const inviter = await makeUser(db, 'inviter@example.com', 'Inviter');
-      const { token, invite } = await createInvite(db, inviter.id, 'FRIEND@Example.com');
+      const { token, invite } = await createInvite(
+        db,
+        inviter.id,
+        'FRIEND@Example.com',
+      );
       expect(token).toBeTruthy();
       expect(invite.status).toBe('pending');
       expect(invite.inviteeEmail).toBe('friend@example.com'); // lowercased
@@ -44,11 +48,25 @@ describe('invites service (GROUP-02 / GROUP-03)', () => {
       ).rejects.toBeInstanceOf(DuplicateInviteError);
     });
 
+    it('allows a new invitation after the previous one expires', async () => {
+      const inviter = await makeUser(db, 'inviter@example.com', 'Inviter');
+      await createInvite(
+        db,
+        inviter.id,
+        'friend@example.com',
+        Date.now() - 8 * 24 * 60 * 60 * 1000,
+      );
+      const fresh = await createInvite(db, inviter.id, 'friend@example.com');
+      expect(fresh.invite.status).toBe('pending');
+      const rows = await db.select().from(invites);
+      expect(rows.filter((row) => row.status === 'expired')).toHaveLength(1);
+    });
+
     it('rejects an invalid email', async () => {
       const inviter = await makeUser(db, 'inviter@example.com', 'Inviter');
-      await expect(createInvite(db, inviter.id, 'not-an-email')).rejects.toThrow(
-        /invalid email/,
-      );
+      await expect(
+        createInvite(db, inviter.id, 'not-an-email'),
+      ).rejects.toThrow(/invalid email/);
     });
   });
 

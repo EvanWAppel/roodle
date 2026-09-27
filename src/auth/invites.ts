@@ -3,7 +3,7 @@
  * its hash + expiry), email a link, and on accept create the friendship + game
  * between inviter and invitee. Errors are surfaced, never swallowed.
  */
-import { and, eq } from 'drizzle-orm';
+import { and, eq, lte } from 'drizzle-orm';
 import type { DB } from '@/db/client';
 import { invites, type Invite, type Friendship, type Game } from '@/db/schema';
 import { generateToken, hashToken } from './tokens';
@@ -38,15 +38,31 @@ export class InviteEmailMismatchError extends Error {
  * Issue a friend invite. Stores only the token hash; returns the raw token for
  * the caller to build the accept link. Throws on invalid email, or
  * DuplicateInviteError when a pending invite to the same email already exists.
+ * Explicit resend retires pending links; callers wrap issuance and delivery in a
+ * transaction so a failed resend preserves the original invitation.
  */
 export async function createInvite(
   db: DB,
   inviterId: string,
   email: string,
   now: number = Date.now(),
+  resend = false,
 ): Promise<{ token: string; invite: Invite }> {
   const inviteeEmail = normalizeEmail(email);
   if (!EMAIL_RE.test(inviteeEmail)) throw new Error('invalid email');
+
+  // Release stale invites, or replace a pending invite when explicitly resent.
+  await db
+    .update(invites)
+    .set({ status: 'expired' })
+    .where(
+      and(
+        eq(invites.inviterId, inviterId),
+        eq(invites.inviteeEmail, inviteeEmail),
+        eq(invites.status, 'pending'),
+        resend ? undefined : lte(invites.expiresAt, new Date(now)),
+      ),
+    );
 
   const [dup] = await db
     .select({ id: invites.id })
@@ -122,7 +138,11 @@ export async function acceptInvite(
 
   // Friendship + game are between the inviter and the accepting user. Both
   // ensure* calls are idempotent, so re-accepting is safe.
-  const friendship = await ensureFriendship(db, invite.inviterId, acceptingUser.id);
+  const friendship = await ensureFriendship(
+    db,
+    invite.inviterId,
+    acceptingUser.id,
+  );
   const game = await ensureGameForPair(db, invite.inviterId, acceptingUser.id);
 
   let accepted = invite;

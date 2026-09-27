@@ -40,6 +40,8 @@ export default function DrawPage() {
   const [friendIndex, setFriendIndex] = useState(0);
   const [word, setWord] = useState('');
   const [drawing, setDrawing] = useState<Drawing>([]);
+  const [busy, setBusy] = useState(false);
+  const [canvasVersion, setCanvasVersion] = useState(0);
   const [status, setStatus] = useState<string>('');
 
   useEffect(() => {
@@ -50,6 +52,11 @@ export default function DrawPage() {
       }
       setMe(s.me);
       setFriends(s.friends);
+      const gameId = new URLSearchParams(window.location.search).get('game');
+      const selected = s.friends.findIndex(
+        (friend) => friend.gameId === gameId,
+      );
+      setFriendIndex(selected >= 0 ? selected : 0);
     });
   }, [router]);
 
@@ -70,36 +77,51 @@ export default function DrawPage() {
   }, [opponent]);
 
   const canSubmit = useMemo(
-    () => Boolean(me && opponent && word && drawing.length > 0),
-    [me, opponent, word, drawing],
+    () => Boolean(me && opponent && word && drawing.length > 0 && !busy),
+    [me, opponent, word, drawing, busy],
   );
 
   const submit = useCallback(async () => {
-    if (!me || !opponent) return;
+    if (!canSubmit || !me || !opponent) return;
+    setBusy(true);
     setStatus('Submitting…');
-    await submitTurn({
-      gameId: opponent.gameId,
-      guesserId: opponent.opponent.id,
-      word,
-      strokes: drawing,
-    });
-    setStatus(
-      `Sent to ${opponent.opponent.displayName}! Pick a new word to draw again.`,
-    );
-    setDrawing([]);
-    setWord(await offerWord(opponent.gameId, word));
-  }, [me, opponent, word, drawing]);
+    try {
+      await submitTurn({
+        gameId: opponent.gameId,
+        guesserId: opponent.opponent.id,
+        word,
+        strokes: drawing,
+      });
+      setStatus(
+        `Sent to ${opponent.opponent.displayName}! Pick a new word to draw again.`,
+      );
+      setDrawing([]);
+      setCanvasVersion((version) => version + 1);
+      setWord(await offerWord(opponent.gameId, word));
+    } catch {
+      setStatus('Could not send your drawing. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }, [me, opponent, word, drawing, canSubmit]);
 
   const newWord = useCallback(async () => {
-    if (!opponent) return;
+    if (!opponent || busy) return;
+    setBusy(true);
+    setDrawing([]);
+    setCanvasVersion((version) => version + 1);
     setWord(await offerWord(opponent.gameId, word));
-  }, [opponent, word]);
+    setBusy(false);
+  }, [opponent, word, busy]);
 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Draw</h1>
-        <nav className="flex gap-4 text-sm">
+        <nav className="flex flex-wrap gap-4 text-sm">
+          <Link href="/friends" className="text-blue-600 underline">
+            Invite a friend
+          </Link>
           <Link href="/play" className="text-blue-600 underline">
             Guess →
           </Link>
@@ -114,11 +136,7 @@ export default function DrawPage() {
 
       {me && friends.length === 0 && (
         <p className="text-sm text-gray-500">
-          You have no friends yet.{' '}
-          <Link href="/friends" className="text-blue-600 underline">
-            Invite a friend
-          </Link>{' '}
-          to start playing.
+          You have no friends yet. Invite a friend to start playing.
         </p>
       )}
 
@@ -127,7 +145,13 @@ export default function DrawPage() {
           <span className="text-gray-500">Draw for:</span>
           <select
             value={friendIndex}
-            onChange={(e) => setFriendIndex(Number(e.target.value))}
+            disabled={busy}
+            onChange={(e) => {
+              setFriendIndex(Number(e.target.value));
+              setWord('');
+              setDrawing([]);
+              setStatus('');
+            }}
             className="rounded border px-2 py-1"
           >
             {friends.map((f, i) => (
@@ -156,12 +180,16 @@ export default function DrawPage() {
               type="button"
               className="rounded border px-2 py-1 text-sm"
               onClick={newWord}
+              disabled={busy || !word}
             >
               New word
             </button>
           </div>
 
-          <DrawCanvas onChange={setDrawing} />
+          <DrawCanvas
+            key={`${opponent.gameId}:${canvasVersion}`}
+            onChange={setDrawing}
+          />
 
           <button
             type="button"

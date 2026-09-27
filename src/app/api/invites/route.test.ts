@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createTestDb } from '@/db/testDb';
 import { __setTestDb } from '@/db/client';
@@ -46,6 +46,11 @@ describe('POST /api/invites (GROUP-02)', () => {
     currentUser.mockResolvedValue(inviter);
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
   it('creates a pending invite and emails the invitee with an accept link', async () => {
     const res = await inviteRoute(post({ email: 'Friend@Example.com' }));
     expect(res.status).toBe(201);
@@ -73,6 +78,55 @@ describe('POST /api/invites (GROUP-02)', () => {
     await inviteRoute(post({ email: 'friend@example.com' }));
     const res = await inviteRoute(post({ email: 'friend@example.com' }));
     expect(res.status).toBe(409);
+  });
+
+  it('resends a pending invite with a new link and retires the old one', async () => {
+    await inviteRoute(post({ email: 'friend@example.com' }));
+    const res = await inviteRoute(
+      post({ email: 'friend@example.com', resend: true }),
+    );
+    expect(res.status).toBe(201);
+    expect(capture.sentInvites).toHaveLength(2);
+    expect(capture.sentInvites[1].url).not.toBe(capture.sentInvites[0].url);
+    const rows = await db.select().from(invites);
+    expect(rows.filter((row) => row.status === 'pending')).toHaveLength(1);
+    expect(rows.filter((row) => row.status === 'expired')).toHaveLength(1);
+  });
+
+  it('rolls back a failed email so the invitation can be retried', async () => {
+    vi.spyOn(capture, 'sendInvite').mockRejectedValueOnce(
+      new Error('provider failure'),
+    );
+    const failed = await inviteRoute(post({ email: 'friend@example.com' }));
+    expect(failed.status).toBe(502);
+    expect(await db.select().from(invites)).toHaveLength(0);
+    expect(
+      (await inviteRoute(post({ email: 'friend@example.com' }))).status,
+    ).toBe(201);
+  });
+
+  it('preserves the previous invite when resending fails', async () => {
+    await inviteRoute(post({ email: 'friend@example.com' }));
+    const original = await db.select().from(invites);
+    vi.spyOn(capture, 'sendInvite').mockRejectedValueOnce(
+      new Error('provider failure'),
+    );
+    const failed = await inviteRoute(
+      post({ email: 'friend@example.com', resend: true }),
+    );
+    expect(failed.status).toBe(502);
+    expect(await db.select().from(invites)).toEqual(original);
+  });
+
+  it('does not claim email delivery in production without a provider', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('RESEND_API_KEY', '');
+    vi.stubEnv('EMAIL_FROM', '');
+    expect(
+      (await inviteRoute(post({ email: 'friend@example.com' }))).status,
+    ).toBe(503);
+    expect(await db.select().from(invites)).toHaveLength(0);
+    expect(capture.sentInvites).toHaveLength(0);
   });
 
   it('returns 401 when unauthenticated', async () => {
