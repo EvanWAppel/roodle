@@ -211,3 +211,17 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
   new one (the next turn is a separate `POST /api/turns`), so there is no
   "other player's move" to nudge there — NOTIF-03's "if applicable" clause does
   not apply in this game model.
+
+### D14 — Pending invitations live on /friends, not the game hub
+- **Date:** 2026-09-27
+- **Status:** ⏳ Drafted; Evan chose the placement in-session (awaiting written confirm).
+- **Chose:** Render the DESIGN-05 pending-invitations list (expiry-aware labels +
+  per-invite resend) on the **/friends page**, alongside the existing "Invite a
+  friend" form. Added `GET /api/invites` (owner-scoped) and
+  `listPendingInvites` / `inviteExpiryLabel` in `src/auth/invites.ts`.
+- **Rejected:** the game hub (homepage), which is where **PRD RD-2** places it.
+- **Why:** Evan redesigned the hub in a separate session and asked to avoid new
+  design surface there for now; /friends already owns invite send + resend logic,
+  so the list is cohesive there and the freshly-redesigned hub is left untouched.
+  This is a deliberate deviation from PRD RD-2 — if we later want it on the hub
+  too, the API + helpers already support it.
