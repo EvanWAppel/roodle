@@ -35,12 +35,19 @@ export default async function Home() {
           <p>
             {user
               ? 'Pick up where you left off. There’s no timer here, just friends and a blank page.'
-              : 'Roodle is a private drawing & guessing game for friends. Send a sketch. Watch it unfold. Make someone’s day.'}
+              : 'Roodle is a private, invite-only drawing & guessing game for friends. Send a sketch, watch it unfold, make someone’s day — no ads, no purchases, no timers.'}
           </p>
-          {!user && emailConfigured() && (
-            <Link className="button" href="/signin">
-              Sign in <span aria-hidden="true">↗</span>
-            </Link>
+          {!user && (
+            <div className="intro-actions">
+              {emailConfigured() && (
+                <Link className="button" href="/signin">
+                  Sign in <span aria-hidden="true">↗</span>
+                </Link>
+              )}
+              <Link className="text-link" href="/try">
+                Try a sample round <span aria-hidden="true">↗</span>
+              </Link>
+            </div>
           )}
         </section>
         {user ? (

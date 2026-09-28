@@ -292,8 +292,14 @@ older Vercel scaffold tasks above are historical and not redesign prerequisites.
   excluded); `isGameMember` gates the `?game=` deep-link. Client-rendered static
   thumbnails via shared `renderDrawing` reconcile DRAW-07 (see below) with no stored
   image. 12 new tests: gallery data, membership auth, renderer, thumbnail, tile.)*
-- [ ] **DESIGN-11** Add signed-out introduction and isolated optional sample
+- [x] **DESIGN-11** Add signed-out introduction and isolated optional sample
   round using labeled fixtures. Test no private data access, game writes, or email.
+  *(Dedicated `/try` route (DECISIONS D16): runs the real replay→tiles→guess loop
+  fully client-side against a labeled "house" fixture — zero network calls. Signed-out
+  home gained a privacy/no-purchases line + "Try a sample round" CTA. Tests assert the
+  solve works and no fetch/XHR/sendBeacon fires; build prerenders /try as static.
+  Also added an optional `label` prop to DrawingReplay so the sample canvas isn't
+  announced as "your friend's drawing".)*
 - [ ] **DESIGN-12** Finish keyboard, contrast, touch-target and reduced-motion
   audit; inspect 320/390/1440px layouts, canvas/replay fidelity, and feedback states.
 - [ ] **DESIGN-13** Regression check invites, concurrent games, drafts, drawing,

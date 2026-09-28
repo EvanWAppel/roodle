@@ -22,6 +22,8 @@ export interface DrawingReplayProps {
   width?: number;
   height?: number;
   onDone?: () => void;
+  /** Accessible name for the canvas. Defaults to the real-game phrasing. */
+  label?: string;
 }
 
 /**
@@ -33,6 +35,7 @@ export function DrawingReplay({
   width = 400,
   height = 300,
   onDone,
+  label = 'Your friend’s drawing',
 }: DrawingReplayProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -180,7 +183,7 @@ export function DrawingReplay({
     <div className="replay-panel">
       <canvas
         className="drawing-paper"
-        aria-label="Your friend’s drawing"
+        aria-label={label}
         ref={canvasRef}
         width={width}
         height={height}

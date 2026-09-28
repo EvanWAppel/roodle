@@ -243,3 +243,19 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
   the gallery is gated by game membership (`isGameMember`) and only ever shows
   **resolved** turns, so an unrevealed answer word can never leak (IDOR + answer
   leak both covered by tests).
+
+### D16 — Signed-out sample round: dedicated /try route, fully client-side
+- **Date:** 2026-09-27
+- **Status:** ⏳ Drafted; Evan chose placement in-session (awaiting written confirm).
+- **Chose:** A dedicated **/try** route for the optional sample round, linked from the
+  signed-out home. It runs the real replay→tiles→guess loop **entirely client-side**
+  against a hardcoded, clearly-labeled fixture (`src/lib/sampleRound.ts`, a "house"
+  doodle) — **zero network calls** (no `/api`, no DB, no email, no session). Evan gave
+  latitude to refine the signed-out intro copy; added a privacy/no-purchases line and
+  the "Try a sample round" CTA.
+- **Rejected:** embedding the demo inline on the home page (keeps the landing concise);
+  a server-driven demo (would risk touching real data — the whole point is isolation).
+- **Why:** the fixture + client-only loop makes RD-6's privacy constraint structural,
+  not incidental: there is no code path from /try to private data or email. Verified by
+  a test asserting no `fetch`/`XMLHttpRequest`/`sendBeacon` during the full solve, and
+  the production build prerenders /try as a static route (`○`) with no server data.

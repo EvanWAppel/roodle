@@ -90,6 +90,12 @@ body {
   color: var(--muted);
   margin-bottom: 26px;
 }
+.intro-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
 .section-heading {
   display: flex;
   justify-content: space-between;

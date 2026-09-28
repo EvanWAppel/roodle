@@ -22,6 +22,10 @@ describe('Home route', () => {
       screen.getByRole('heading', { level: 1, name: /more doodling/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /sign in/i })).toBeInTheDocument();
+    // Offers the no-sign-in sample round (DESIGN-11).
+    expect(
+      screen.getByRole('link', { name: /try a sample round/i }),
+    ).toHaveAttribute('href', '/try');
     expect(getDb).not.toHaveBeenCalled();
     expect(listGameCards).not.toHaveBeenCalled();
   });
