@@ -19,6 +19,11 @@ const destinations = [
     label: 'Scores',
     path: 'M5 20v-6h4v6M10 20V4h4v16M15 20V9h4v11',
   },
+  {
+    href: '/gallery',
+    label: 'Gallery',
+    path: 'M4 5h16v14H4zM4 16l4-4 3 3 4-5 5 5',
+  },
 ];
 
 export function GameShell({

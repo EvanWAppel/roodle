@@ -1,12 +1,55 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   validateDrawing,
+  renderDrawing,
   MAX_STROKES,
   MAX_POINTS_PER_STROKE,
   MAX_TOTAL_POINTS,
   MAX_COLOR_LENGTH,
   MAX_WIDTH,
 } from './strokes';
+import type { Drawing } from './strokes';
+
+function mockCtx() {
+  return {
+    fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 0,
+    lineCap: '',
+    lineJoin: '',
+    fillRect: vi.fn(),
+    beginPath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    stroke: vi.fn(),
+  };
+}
+
+describe('renderDrawing', () => {
+  it('clears the background then strokes each non-empty path once', () => {
+    const drawing: Drawing = [
+      { color: '#111827', width: 4, points: [{ x: 0, y: 0 }, { x: 5, y: 5 }] },
+      { color: '#ef4444', width: 2, points: [{ x: 9, y: 9 }] }, // dot
+      { color: '#22c55e', width: 3, points: [] }, // skipped
+    ];
+    const ctx = mockCtx();
+    renderDrawing(ctx as unknown as CanvasRenderingContext2D, drawing, 400, 300);
+
+    expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 400, 300);
+    // Two non-empty strokes → two paths.
+    expect(ctx.stroke).toHaveBeenCalledTimes(2);
+    expect(ctx.moveTo).toHaveBeenCalledWith(0, 0);
+    // The lone-point stroke draws a tiny segment so its round cap shows.
+    expect(ctx.lineTo).toHaveBeenCalledWith(9.01, 9);
+  });
+
+  it('renders an empty drawing as just a cleared background', () => {
+    const ctx = mockCtx();
+    renderDrawing(ctx as unknown as CanvasRenderingContext2D, [], 100, 100);
+    expect(ctx.fillRect).toHaveBeenCalledOnce();
+    expect(ctx.stroke).not.toHaveBeenCalled();
+  });
+});
 
 const validStroke = {
   color: '#111827',

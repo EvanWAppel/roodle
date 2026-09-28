@@ -225,3 +225,21 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
   so the list is cohesive there and the freshly-redesigned hub is left untouched.
   This is a deliberate deviation from PRD RD-2 — if we later want it on the hub
   too, the API + helpers already support it.
+
+### D15 — Completed-drawing gallery: new /gallery route, client-rendered thumbnails
+- **Date:** 2026-09-27
+- **Status:** ⏳ Drafted; Evan chose both options in-session (awaiting written confirm).
+- **Chose:** (a) A dedicated **/gallery** route (per-game thumbnail grid), reached
+  from the shell nav, rather than folding the gallery into the scores page. (b)
+  Render thumbnails **client-side from the stored strokes** (final frame only) at
+  view time — no stored thumbnail images.
+- **Rejected:** (a) rebuilding the scores page gallery-first (per PRD RD-5's "scores
+  secondary" wording) — kept scores intact and gave the gallery its own surface;
+  (b) building DRAW-07 for real (generate + store a thumbnail image per drawing) —
+  more infra (storage + migration) for no visible benefit at current scale.
+- **Why:** a separate route keeps each surface focused and avoids disturbing the
+  just-restyled scores page. Client-rendered thumbnails reuse the strokes already
+  in `turns.strokes`, so DRAW-07 is **reconciled** without new storage. Security:
+  the gallery is gated by game membership (`isGameMember`) and only ever shows
+  **resolved** turns, so an unrevealed answer word can never leak (IDOR + answer
+  leak both covered by tests).

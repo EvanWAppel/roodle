@@ -68,6 +68,39 @@ export const MAX_TOTAL_POINTS = 100_000;
 export const MAX_COLOR_LENGTH = 32;
 export const MAX_WIDTH = 64;
 
+/**
+ * Render a completed drawing's final frame onto a 2D context in a single pass
+ * (no animation). Fills the background, then strokes each path in draw order; a
+ * single-point stroke becomes a dot. Shared by the gallery thumbnails so their
+ * output matches the replay's final frame. Pure aside from the canvas writes.
+ */
+export function renderDrawing(
+  ctx: CanvasRenderingContext2D,
+  drawing: Drawing,
+  width: number,
+  height: number,
+): void {
+  ctx.fillStyle = CANVAS_BG;
+  ctx.fillRect(0, 0, width, height);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const stroke of drawing) {
+    if (stroke.points.length === 0) continue;
+    ctx.beginPath();
+    ctx.strokeStyle = stroke.color;
+    ctx.lineWidth = stroke.width;
+    const [first, ...rest] = stroke.points;
+    ctx.moveTo(first.x, first.y);
+    if (rest.length === 0) {
+      // A lone point: draw a tiny segment so the round cap paints a dot.
+      ctx.lineTo(first.x + 0.01, first.y);
+    } else {
+      for (const p of rest) ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+  }
+}
+
 /** Result of validating an untrusted value against the {@link Drawing} shape. */
 export type ValidateDrawingResult =
   | { ok: true; drawing: Drawing }
