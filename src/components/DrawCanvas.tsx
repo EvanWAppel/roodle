@@ -6,6 +6,7 @@ import {
   type Point,
   type Stroke,
   INK_COLORS,
+  INK_COLOR_NAMES,
   BRUSH_SIZES,
   CANVAS_BG,
   ERASER_COLOR,
@@ -160,7 +161,7 @@ export function DrawCanvas({
             <button
               key={c}
               type="button"
-              aria-label={`color ${c}`}
+              aria-label={INK_COLOR_NAMES[c]}
               aria-pressed={!eraser && color === c}
               onClick={() => {
                 setColor(c);

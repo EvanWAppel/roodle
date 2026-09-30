@@ -31,7 +31,7 @@ export default function TryPage() {
 
   return (
     <div className="studio-shell">
-      <StudioHeader />
+      <StudioHeader current="/try" />
       <main id="main-content" className="studio-main">
         <section className="studio-intro">
           <p className="eyebrow">Sample round · no sign-in needed</p>

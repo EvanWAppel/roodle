@@ -11,7 +11,7 @@ export default async function Home() {
   const cards = user ? await listGameCards(await getDb(), user.id) : [];
   return (
     <div className="studio-shell">
-      <StudioHeader />
+      <StudioHeader current="/" />
       <main id="main-content" className="studio-main">
         <section className="studio-intro">
           <div className="eyebrow">

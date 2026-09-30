@@ -26,6 +26,16 @@ export const INK_COLORS = [
   '#a855f7', // purple
 ] as const;
 
+/** Human-readable names for the palette, for accessible swatch labels. */
+export const INK_COLOR_NAMES: Record<(typeof INK_COLORS)[number], string> = {
+  '#111827': 'ink',
+  '#ef4444': 'red',
+  '#f59e0b': 'amber',
+  '#22c55e': 'green',
+  '#3b82f6': 'blue',
+  '#a855f7': 'purple',
+};
+
 /** Brush sizes (stroke widths in px). */
 export const BRUSH_SIZES = [
   { label: 'S', width: 2 },

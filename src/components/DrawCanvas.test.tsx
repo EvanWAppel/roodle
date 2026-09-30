@@ -48,7 +48,7 @@ describe('DrawCanvas', () => {
   it('records the chosen color', () => {
     const onChange = vi.fn<(drawing: Drawing) => void>();
     render(<DrawCanvas onChange={onChange} />);
-    fireEvent.click(screen.getByLabelText('color #ef4444'));
+    fireEvent.click(screen.getByLabelText('red'));
     stroke(getCanvas(), [
       [1, 1],
       [2, 2],

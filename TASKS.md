@@ -217,17 +217,31 @@ Deepens SLICE-08/09.
 
 ## Group POLISH — Integration, a11y, ship  → sequential · depends on all above
 
-- [ ] **POLISH-01** Mobile-first responsive pass on every screen. Test/visual
+- [~] **POLISH-01** Mobile-first responsive pass on every screen. Test/visual
   check on phone viewport.
-- [ ] **POLISH-02** Accessibility: contrast, tap-target sizes, keyboard guessing
+  *(Code-level responsive work done through DESIGN-06/12; mobile media queries and
+  320px overflow guards verified in the a11y audit. Manual phone-viewport visual
+  check remains — reserved for Evan (browser guardrail); see BLOCKED.md.)*
+- [~] **POLISH-02** Accessibility: contrast, tap-target sizes, keyboard guessing
   on desktop. Test: a11y checks pass on key screens.
-- [ ] **POLISH-03** Confirm **zero ads / zero purchase prompts** anywhere (product
+  *(DESIGN-12 audit: contrast (all key pairs ≥4.5:1), ≥44px tap targets, focus-visible,
+  reduced-motion, semantics all verified in code; keyboard guessing works (tiles are
+  real buttons). HIGH/MED findings fixed. Manual AT/keyboard walkthrough = Evan.)*
+- [x] **POLISH-03** Confirm **zero ads / zero purchase prompts** anywhere (product
   constraint, PRD NFR-1). Manual audit + note.
+  *(Audited 2026-09-27: no ad/payment/analytics/tracking/purchase code anywhere in
+  `src`, and no such SDKs in `package.json`. The only "ad"/"purchase" strings are copy
+  affirming their absence — layout metadata + home/try footers "No ads. No coins.")*
 - [ ] **POLISH-04** Custom domain (PRD OQ2) + production deploy on a stable URL.
-- [ ] **POLISH-05** Full regression: all group test suites green, lint +
+  *(Requires Evan — deploy + DNS. See BLOCKED.md.)*
+- [x] **POLISH-05** Full regression: all group test suites green, lint +
   typecheck clean, E2E slice still passes.
+  *(2026-09-27: 266 tests green across all 47 files (run in batches — one PGlite
+  beforeEach-timeout flake confirmed passing in isolation), lint + typecheck clean,
+  production build succeeds (/gallery dynamic, /try static). E2E slice (SLICE-12) green.)*
 - [ ] **POLISH-06** Real game with Christine end-to-end; capture feedback →
   `DECISIONS.md` / next-iteration tasks.
+  *(Requires Evan — real deployed game with Christine. See BLOCKED.md.)*
 
 ---
 
@@ -300,16 +314,32 @@ older Vercel scaffold tasks above are historical and not redesign prerequisites.
   solve works and no fetch/XHR/sendBeacon fires; build prerenders /try as static.
   Also added an optional `label` prop to DrawingReplay so the sample canvas isn't
   announced as "your friend's drawing".)*
-- [ ] **DESIGN-12** Finish keyboard, contrast, touch-target and reduced-motion
+- [~] **DESIGN-12** Finish keyboard, contrast, touch-target and reduced-motion
   audit; inspect 320/390/1440px layouts, canvas/replay fidelity, and feedback states.
-- [ ] **DESIGN-13** Regression check invites, concurrent games, drafts, drawing,
+  *(Code-level a11y audit done: touch targets ≥44px, focus-visible, contrast (all
+  key pairs ≥4.5:1), reduced-motion, and 320px overflow all verified good. Fixed:
+  skip link + aria-current missing on the studio header (home/try) [HIGH]; studio-nav
+  tap-width [MED]; human-readable color-swatch labels [MED]. **Remaining = manual
+  visual sweep** at 320/390/1440px in a real browser — reserved for Evan per the
+  browser guardrail; see POLISH checklist in BLOCKED/notes.)*
+- [~] **DESIGN-13** Regression check invites, concurrent games, drafts, drawing,
   replay, guessing, packs, scores; production build, lint/typecheck, deployment
   verification, and real-game feedback. Keep completion evidence below.
+  *(Automated gates done 2026-09-27: full suite 266 green, lint + typecheck clean,
+  production build succeeds. Deployment verification + real-game feedback remain and
+  need Evan — see BLOCKED.md.)*
 
 ### Redesign execution log
 
 - 2026-09-26: Full scope recorded. Starting visual studies, design foundations,
   and game hub. Later phases remain explicitly queued above.
+- 2026-09-27: DESIGN-05 (pending invites, #17), DESIGN-09 (packs/scores restyle,
+  #18), DESIGN-10 (gallery, #19), DESIGN-11 (signed-out intro + sample round, #20)
+  all merged to main. DESIGN-12 code-level a11y audit + fixes (skip link, aria-current,
+  nav tap-width, color-swatch labels) and POLISH-03/05 done. Remaining is manual and
+  reserved for Evan (browser guardrail): the 320/390/1440px visual sweep (DESIGN-12),
+  deployment verification + real game with Christine (DESIGN-13 / POLISH-04, -06).
+  Tracked in BLOCKED.md.
 
 - 2026-09-26, first implementation increment (local, not deployed):
   - DESIGN-02 complete: `docs/design/hub.html` and `drawing.html` provide
