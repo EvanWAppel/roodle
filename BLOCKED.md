@@ -18,6 +18,6 @@ automated a11y audit, tests, lint, typecheck, and production build are all done)
   tasks in `DECISIONS.md` / `TASKS.md`. (DESIGN-13 / POLISH-06)
 
 <!-- Add a `- [ ]` line the moment something needs Evan. Format:
-- [ ] 🔴 <blocking thing> — exact steps to unblock: the action, where (file / env-var / URL / dashboard), any link, why it's safe. (T-xx)
-- [ ] 🟡 <nice-to-have> — same.
+`- [ ] 🔴 <blocking thing> — exact steps to unblock: the action, where (file / env-var / URL / dashboard), any link, why it's safe. (T-xx)`
+`- [ ] 🟡 <nice-to-have> — same.`
 Only open `- [ ]` items are mirrored into Evan's todo dashboard. -->

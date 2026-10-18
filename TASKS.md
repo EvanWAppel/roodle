@@ -55,7 +55,8 @@ Goal: a running, tested, deployable skeleton. Do this first, linearly.
   add DB connection module with a health-check test.
 - [x] **SCAF-07** Add DB migration tooling; commit an empty initial migration.
 - [ ] **SCAF-08** Set up CI (lint + typecheck + test on push) and a first Vercel
-  deploy of the skeleton to a stable preview URL.
+  deploy of the skeleton to a stable preview URL. *(CI half done:
+  `.github/workflows/ci.yml`. Deploy half is tracked in `BLOCKED.md` / POLISH-04.)*
 - [x] **SCAF-09** Create `BLOCKED.md` (standard furniture; heading + "nothing
   blocked right now", zero checkboxes until something blocks).
 
