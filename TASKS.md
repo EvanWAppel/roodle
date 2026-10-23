@@ -21,6 +21,8 @@ before building anything out.
   Review at each join).
 - **Stack assumption:** TS + Next.js (App Router) on Vercel, Postgres, per PRD §8.
   This is pending Evan's confirmation (PRD OQ1) — `SCAF-01` locks it before code.
+  *(Superseded: hosting moved to Railway with Railway Postgres; PGlite is used for
+  dev and tests. See DECISIONS D7 / D3.)*
 
 ### Dependency map
 
@@ -53,10 +55,16 @@ Goal: a running, tested, deployable skeleton. Do this first, linearly.
   home route renders — prove the TDD harness runs red→green.
 - [x] **SCAF-06** Provision Postgres (Vercel Marketplace) + choose ORM/query layer;
   add DB connection module with a health-check test.
+  *(Reality, per DECISIONS D7: prod Postgres is a **Railway** Postgres addon, not
+  Vercel Marketplace/Neon. `DATABASE_URL` comes from a Railway service reference;
+  dev and tests use PGlite (D3). The ORM is Drizzle.)*
 - [x] **SCAF-07** Add DB migration tooling; commit an empty initial migration.
 - [ ] **SCAF-08** Set up CI (lint + typecheck + test on push) and a first Vercel
   deploy of the skeleton to a stable preview URL. *(CI half done:
   `.github/workflows/ci.yml`. Deploy half is tracked in `BLOCKED.md` / POLISH-04.)*
+  *(Reality, per DECISIONS D7: the deploy target is **Railway** (`roodle-web`), not
+  Vercel. https://roodle-web-production.up.railway.app and https://roodle.evanappel.me
+  both returned 200 on 2026-10-22. Ticking this stays with Evan via POLISH-04.)*
 - [x] **SCAF-09** Create `BLOCKED.md` (standard furniture; heading + "nothing
   blocked right now", zero checkboxes until something blocks).
 

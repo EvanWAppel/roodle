@@ -269,17 +269,31 @@ long-running match), not a one-off round.
 
 ## 13. Open questions for Evan
 
+*Status reconciled 2026-10-24 (W-04): OQ1–OQ4 are resolved; OQ5–OQ6 have no
+recorded decision.*
+
 - **OQ1.** Confirm the Next.js-on-Vercel stack (§8) — or prefer something else?
+  **Resolved:** Next.js confirmed (DECISIONS D1), but the deploy target became
+  **Railway** (app service `roodle-web` + Railway Postgres), not Vercel/Neon
+  (DECISIONS D7).
 - **OQ2.** Custom domain under `evanappel.me` (e.g. `roodle.evanappel.me`) or a
   standalone domain?
+  **Resolved:** `roodle.evanappel.me`. It was live and returning 200 from Railway on
+  2026-10-22. Confirming the production deploy is still Evan's task (POLISH-04 / BLOCKED.md).
 - **OQ3.** Points formula — flat per correct guess, or scaled by difficulty /
   speed?
+  **Resolved:** flat 1 point per correct guess (DECISIONS D5, SCORE-01).
 - **OQ4.** Should a game be strictly 1:1 chains, or can you have several
   concurrent games with different friends?
+  **Resolved:** several independent concurrent games are supported (§14, Audience
+  and objective).
 - **OQ5.** How much drawing fidelity to preserve (affects stroke-data size /
   replay smoothness)?
+  *Still open:* DRAW-06 enforces a stroke-data schema and size budget, but no
+  fidelity decision is recorded in DECISIONS.md.
 - **OQ6.** Any content/word filtering needed for custom packs, or fully trusted
   (private friends)?
+  *Still open:* no decision is recorded in DECISIONS.md.
 
 
 ## 14. Approved visual redesign — creative studio (2026-09-26)
