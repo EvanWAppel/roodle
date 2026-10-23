@@ -1,0 +1,39 @@
+# Drafted 2026-10-22 by a weekend-prep session from roodle's own code/docs (not yet
+# verified by roodle's project session). Format: _system/docs/project-toml.md
+
+[project]
+name = "roodle"
+group = "portfolio/games"
+kind = "app"
+status = "active"
+repo = "EvanWAppel/roodle"
+visibility = "public"
+on_site = true              # enki data/projects.ts id "roodle" (featured)
+verified = false
+
+[deploy]
+host = "railway"
+services = ["roodle-web"]   # + Railway Postgres addon (DECISIONS D7)
+domain = "roodle.evanappel.me"   # serves via Railway (HTTP 200, 2026-10-22)
+origin_urls_closed = false  # roodle-web-production.up.railway.app still serves (HTTP 200, 2026-10-22)
+
+[auth]
+scheme = "magic-link"       # custom HMAC-session magic link (D8); users row created on first sign-in
+access_list = "table:friendships"   # play is friend-gated via email invites (table:invites)
+target = "unknown"
+
+[data]
+db = "railway-postgres"     # PGlite in dev/test (D3)
+
+[demo]
+status = "live"             # signed-out home + fully client-side sample round (D16)
+url = "https://roodle.evanappel.me/try"
+path = "/try"
+
+[keys]
+paid = []                   # RESEND_API_KEY: free tier on Evan's shared Resend account, dedicated revocable key, no spend (D9)
+isolated = "n/a"
+spend_cap = "n/a"
+
+[platform]
+done = []
