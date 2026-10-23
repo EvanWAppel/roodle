@@ -259,3 +259,27 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
   not incidental: there is no code path from /try to private data or email. Verified by
   a test asserting no `fetch`/`XMLHttpRequest`/`sendBeacon` during the full solve, and
   the production build prerenders /try as a static route (`○`) with no server data.
+
+### D17 — Test harness: one migrated PGlite template per run, capped workers
+- **Date:** 2026-10-22
+- **Status:** ⏳ Drafted by agent (W-01); awaiting Evan's confirm.
+- **Chose:** both levers. (a) A Vitest `globalSetup` (`src/test/pgliteTemplate.ts`)
+  boots PGlite and runs the migrations **once per run**, dumps the data dir to a temp
+  tarball, and `provide`s its path; `createTestDb()` loads it per test with
+  `PGlite.create({ loadDataDir })` (falling back to migrating if no template is
+  provided) and auto-closes every DB in an `afterEach`. (b) `maxWorkers: 4` and
+  `hookTimeout: 60000` in `vitest.config.mts`.
+- **Rejected:** `PGlite.clone()` per test — it re-dumps the source data dir on every
+  call, so reusing one dump is strictly cheaper. A per-worker in-memory template —
+  test files are isolated, so a module-level cache only lives for one file; the
+  on-disk tarball is shared by every file. Only capping workers — it treats the
+  symptom; each test would still run every migration.
+- **Trade-offs:** the cap makes an idle-machine run use 4 of 16 cores (minor here; the
+  suite is dominated by per-file WASM boot). The 60s hook timeout means a truly hung
+  `beforeEach` takes longer to report. DBs must be created per test, not in
+  `beforeAll` (the auto-close would close them after the first test); all current
+  call sites already do this.
+- **Measured (2026-10-22, plain `npm run test:run`, machine load avg 170–650 from other
+  work):** before — 144/266 failed (PGlite `beforeEach` hook timeouts), 1014s wall.
+  Template alone — 6/271 failed (still cold-boot hook timeouts), 195s. Template + cap +
+  timeout — 271/271 pass twice in a row, 242s and 300s wall.
