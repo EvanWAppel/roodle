@@ -37,3 +37,15 @@ spend_cap = "n/a"
 
 [platform]
 done = []
+
+[commands]
+setup = "npm ci"
+test = "npm run test:run"
+lint = "npm run lint && npm run typecheck"
+
+[fleet]                     # joined 2026-10-31 (_system D-051); also has the `fleet` topic
+component = "roodle"
+agents = ["claude", "codex"]
+default_model = "sonnet"
+default_branch = "main"
+max_minutes = 45
