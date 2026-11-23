@@ -32,6 +32,13 @@ automated a11y audit, tests, lint, typecheck, and production build are all done)
   its own magic-link auth or moves behind Cloudflare Access / another scheme, then flip
   `verified = true` after checking the draft.
 
+- [ ] 🔴 [sec] **Mint and wire `ROODLE_READ_TOKEN` for the ложь turn feed (X8 / EA-221).** After the
+  `x8-news-turns` PR merges: run `openssl rand -base64 32`, save it in 1Password `news` →
+  `roodle_read_token`. In Railway (`roodle-web` → Variables) set `ROODLE_READ_TOKEN` to it and
+  `NEWS_PLAYER_EMAIL` to your roodle sign-in email. In the news repo, add the same token to its
+  Actions secrets. Then deploy roodle. Until then the route returns 401 to everyone (fails closed),
+  so nothing is exposed meanwhile.
+
 <!-- Add a `- [ ]` line the moment something needs Evan. Format:
 `- [ ] 🔴 <blocking thing> — exact steps to unblock: the action, where (file / env-var / URL / dashboard), any link, why it's safe. (T-xx)`
 `- [ ] 🟡 <nice-to-have> — same.`
