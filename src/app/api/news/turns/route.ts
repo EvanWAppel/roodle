@@ -18,7 +18,7 @@ export async function GET(req: Request) {
       process.env.ROODLE_READ_TOKEN,
     )
   ) {
-    console.warn('[roodle] news/turns: rejected unauthorized request');
+    // Not logged: scanners hitting a public URL would flood the logs.
     return new Response(null, { status: 401 });
   }
 
@@ -35,14 +35,18 @@ export async function GET(req: Request) {
   console.info(
     `[roodle] news/turns: ${games.length} games (${games.filter((g) => g.turn === 'you').length} on you)${player ? '' : ' — news player has no account'}`,
   );
-  return NextResponse.json({
-    schema: 1,
-    game: 'roodle',
-    generated_at: isoSeconds(new Date()),
-    games,
-  });
+  return NextResponse.json(
+    {
+      schema: 1,
+      game: 'roodle',
+      generated_at: isoSeconds(new Date()),
+      games,
+    },
+    { headers: { 'cache-control': 'no-store' } },
+  );
 }
 
+/** Every other verb, including HEAD and OPTIONS that Next would otherwise auto-answer. */
 function methodNotAllowed() {
   return new Response(null, { status: 405, headers: { allow: 'GET' } });
 }
@@ -52,4 +56,6 @@ export {
   methodNotAllowed as PUT,
   methodNotAllowed as PATCH,
   methodNotAllowed as DELETE,
+  methodNotAllowed as HEAD,
+  methodNotAllowed as OPTIONS,
 };

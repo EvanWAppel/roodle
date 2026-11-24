@@ -5,7 +5,7 @@ import { __setTestDb } from '@/db/client';
 import type { DB } from '@/db/client';
 import { createFriendPair } from '@/db/friends';
 import { turns } from '@/db/schema';
-import { DELETE, GET, PATCH, POST, PUT } from './route';
+import { DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT } from './route';
 
 const TOKEN = 'test-read-token-0123456789abcdef';
 const ME = 'evan@example.com';
@@ -86,6 +86,7 @@ describe('GET /api/news/turns (X8)', () => {
     const res = await GET(get(`Bearer ${TOKEN}`));
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toMatch(/^application\/json/);
+    expect(res.headers.get('cache-control')).toBe('no-store');
     const body = await res.json();
     expect(body).toMatchObject({ schema: 1, game: 'roodle', games: [] });
     expect(body.generated_at).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
@@ -162,6 +163,32 @@ describe('GET /api/news/turns (X8)', () => {
     ]);
   });
 
+  it('orders by the full timestamp, not the second-truncated string', async () => {
+    const amy = await friend('amy@example.com', 'Amy');
+    const bob = await friend('bob@example.com', 'Bob');
+    await turn(amy, 'them', '2026-11-21T09:00:00.900Z');
+    await turn(bob, 'them', '2026-11-21T09:00:00.100Z');
+    const got = (await entries()).map((e) => e.opponent);
+    expect(got).toEqual(['Bob', 'Amy']);
+  });
+
+  it('accepts the Bearer scheme case-insensitively', async () => {
+    for (const scheme of ['bearer', 'BEARER', 'BeArEr']) {
+      expect((await GET(get(`${scheme} ${TOKEN}`))).status).toBe(200);
+    }
+  });
+
+  it('does not log rejected requests', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await GET(get('Bearer nope'));
+    expect(warn).not.toHaveBeenCalled();
+    expect(info).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
   it('caps the list at 20 entries', async () => {
     for (let i = 0; i < 22; i++) {
       await friend(`f${i}@example.com`, `Friend ${String(i).padStart(2, '0')}`);
@@ -220,7 +247,7 @@ describe('GET /api/news/turns (X8)', () => {
   });
 
   it('405s every other verb, with or without a token', async () => {
-    for (const handler of [POST, PUT, PATCH, DELETE]) {
+    for (const handler of [POST, PUT, PATCH, DELETE, HEAD, OPTIONS]) {
       const res = await handler();
       expect(res.status).toBe(405);
       expect(res.headers.get('allow')).toBe('GET');

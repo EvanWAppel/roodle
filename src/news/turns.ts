@@ -63,29 +63,38 @@ function entry(card: GameCard): NewsEntry {
   };
 }
 
+/** The pending timestamp an entry's `since` comes from, in ms; none sorts last. */
+function sinceMs(card: GameCard): number {
+  const since = card.incoming > 0 ? card.incomingSince : card.waitingSince;
+  return since?.getTime() ?? Infinity;
+}
+
 /** turn:you first, then oldest since (none last), then name; capped at 20. */
 export function newsEntries(cards: GameCard[]): NewsEntry[] {
   return cards
-    .map(entry)
+    .map((card) => ({ e: entry(card), ms: sinceMs(card) }))
     .sort(
       (a, b) =>
-        Number(a.turn !== 'you') - Number(b.turn !== 'you') ||
-        (a.since ?? '￿').localeCompare(b.since ?? '￿') ||
-        a.opponent.localeCompare(b.opponent),
+        Number(a.e.turn !== 'you') - Number(b.e.turn !== 'you') ||
+        (a.ms === b.ms ? 0 : a.ms < b.ms ? -1 : 1) ||
+        a.e.opponent.localeCompare(b.e.opponent),
     )
-    .slice(0, MAX_ENTRIES);
+    .slice(0, MAX_ENTRIES)
+    .map(({ e }) => e);
 }
 
 /**
- * Does `Authorization` carry `Bearer <expected>`? Compares SHA-256 digests
- * with timingSafeEqual so neither content nor length leaks through timing.
- * An empty expected token never matches (fail closed when unset).
+ * Does `Authorization` carry `Bearer <expected>`? The scheme is
+ * case-insensitive (RFC 7235). Compares SHA-256 digests with timingSafeEqual
+ * so neither content nor length leaks through timing. An empty expected
+ * token never matches (fail closed when unset).
  */
 export function bearerMatches(
   header: string | null,
   expected: string | undefined,
 ): boolean {
-  if (!expected || !header?.startsWith('Bearer ')) return false;
+  const match = header?.match(/^bearer ([\s\S]*)$/i);
+  if (!expected || !match) return false;
   const digest = (s: string) => createHash('sha256').update(s).digest();
-  return timingSafeEqual(digest(header.slice(7)), digest(expected));
+  return timingSafeEqual(digest(match[1]), digest(expected));
 }
