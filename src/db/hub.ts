@@ -9,6 +9,10 @@ export interface GameCard {
   incoming: number;
   waiting: number;
   turnId: string | null;
+  /** createdAt of the oldest drawing awaiting this player's guess. */
+  incomingSince: Date | null;
+  /** createdAt of the oldest drawing awaiting the friend's guess. */
+  waitingSince: Date | null;
 }
 
 /** Only the signed-in player's friendships and pending metadata; no answers. */
@@ -19,7 +23,12 @@ export async function listGameCards(
   const friends = await listFriendsWithGames(db, userId);
   if (!friends.length) return [];
   const pending = await db
-    .select({ id: turns.id, gameId: turns.gameId, guesserId: turns.guesserId })
+    .select({
+      id: turns.id,
+      gameId: turns.gameId,
+      guesserId: turns.guesserId,
+      createdAt: turns.createdAt,
+    })
     .from(turns)
     .where(
       and(
@@ -36,14 +45,17 @@ export async function listGameCards(
       const incoming = pending.filter(
         (t) => t.gameId === gameId && t.guesserId === userId,
       );
+      const waiting = pending.filter(
+        (t) => t.gameId === gameId && t.guesserId !== userId,
+      );
       return {
         gameId,
         name: opponent.displayName,
         incoming: incoming.length,
-        waiting: pending.filter(
-          (t) => t.gameId === gameId && t.guesserId !== userId,
-        ).length,
+        waiting: waiting.length,
         turnId: incoming[0]?.id ?? null,
+        incomingSince: incoming[0]?.createdAt ?? null,
+        waitingSince: waiting[0]?.createdAt ?? null,
       };
     })
     .sort((a, b) => b.incoming - a.incoming || a.name.localeCompare(b.name));

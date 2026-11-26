@@ -283,3 +283,24 @@ Per ROCRLL: the agent drafts; **Evan confirms**. Newest at the bottom.
   work):** before — 144/266 failed (PGlite `beforeEach` hook timeouts), 1014s wall.
   Template alone — 6/271 failed (still cold-boot hook timeouts), 195s. Template + cap +
   timeout — 271/271 pass twice in a row, 242s and 300s wall.
+
+### D18 — News turn feed (X8): fixed public origin, digest-compared bearer, fail closed
+- **Date:** 2026-11-22
+- **Status:** ⏳ Drafted by agent (X8); awaiting Evan's confirm.
+- **Chose:** `GET /api/news/turns` builds its `url`s from a hardcoded
+  `https://roodle.evanappel.me` (`src/news/turns.ts`), not `resolveBaseUrl`/`APP_URL`.
+  The bearer is checked by SHA-256-hashing both sides and comparing with
+  `timingSafeEqual`, so length doesn't leak either. An unset `ROODLE_READ_TOKEN`
+  rejects everything (401). An unset `NEWS_PLAYER_EMAIL` throws (500, not hidden);
+  an email with no account returns `games: []`. Every other verb, including HEAD and
+  OPTIONS (which Next would otherwise answer itself), gets a 405 with `Allow: GET`.
+  The scheme match is case-insensitive (RFC 7235). The 200 carries
+  `Cache-Control: no-store`. Rejected requests aren't logged. A display name
+  containing `@` becomes "a friend".
+- **Rejected:** `resolveBaseUrl(req)`. The news schema-1 contract fixes the origin,
+  and without `APP_URL` that helper trusts `x-forwarded-host`. A plain `===` token
+  compare: it leaks timing.
+- **Trade-offs:** moving the custom domain means a code change here as well as in
+  `APP_URL`. Not logging 401s keeps scanners from flooding the logs, but a
+  misconfigured ложь token shows up only as 401s on ложь's side. The empty-list response for an unknown player hides an `NEWS_PLAYER_EMAIL`
+  typo from ложь, though the server log says "news player has no account".

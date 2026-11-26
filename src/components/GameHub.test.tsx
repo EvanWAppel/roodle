@@ -12,6 +12,8 @@ it('links each friend to their own pending turn or drawing game', () => {
           incoming: 1,
           waiting: 0,
           turnId: 'christine-turn',
+          incomingSince: new Date('2026-11-21T09:00:00Z'),
+          waitingSince: null,
         },
         {
           name: 'Tester',
@@ -19,6 +21,8 @@ it('links each friend to their own pending turn or drawing game', () => {
           incoming: 0,
           waiting: 1,
           turnId: null,
+          incomingSince: null,
+          waitingSince: new Date('2026-11-21T09:00:00Z'),
         },
       ]}
     />,

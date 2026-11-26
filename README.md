@@ -73,14 +73,16 @@ pull request and on every push to `main`.
 These are all the variables the code reads. **Every one is optional for local
 dev.** Only the names are listed here. Never commit values.
 
-| Variable         | Read in               | Purpose                                                                                                                                                                |
-| ---------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`   | `src/db/client.ts`    | Postgres connection string. When set, the app uses postgres-js instead of PGlite and runs migrations on first boot.                                                    |
-| `PGLITE_PATH`    | `src/db/client.ts`    | Directory for the local PGlite data. Defaults to `./.pglite`. Ignored when `DATABASE_URL` is set.                                                                      |
-| `AUTH_SECRET`    | `src/auth/session.ts` | HMAC key for the session cookie. **Required in production.** The app throws without it. Dev falls back to an insecure built-in secret.                                 |
-| `APP_URL`        | `src/lib/baseUrl.ts`  | Canonical public origin for links in emails and for redirects, e.g. `https://roodle.evanappel.me`. Set it in production. Without it the app trusts `x-forwarded-host`. |
-| `RESEND_API_KEY` | `src/auth/email.ts`   | Resend API key. With `EMAIL_FROM`, it turns on real email. Without both, links are logged to the console.                                                              |
-| `EMAIL_FROM`     | `src/auth/email.ts`   | Sender address for Resend, on a verified domain.                                                                                                                       |
+| Variable            | Read in                           | Purpose                                                                                                                                                                                  |
+| ------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`      | `src/db/client.ts`                | Postgres connection string. When set, the app uses postgres-js instead of PGlite and runs migrations on first boot.                                                                      |
+| `PGLITE_PATH`       | `src/db/client.ts`                | Directory for the local PGlite data. Defaults to `./.pglite`. Ignored when `DATABASE_URL` is set.                                                                                        |
+| `AUTH_SECRET`       | `src/auth/session.ts`             | HMAC key for the session cookie. **Required in production.** The app throws without it. Dev falls back to an insecure built-in secret.                                                   |
+| `APP_URL`           | `src/lib/baseUrl.ts`              | Canonical public origin for links in emails and for redirects, e.g. `https://roodle.evanappel.me`. Set it in production. Without it the app trusts `x-forwarded-host`.                   |
+| `RESEND_API_KEY`    | `src/auth/email.ts`               | Resend API key. With `EMAIL_FROM`, it turns on real email. Without both, links are logged to the console.                                                                                |
+| `EMAIL_FROM`        | `src/auth/email.ts`               | Sender address for Resend, on a verified domain.                                                                                                                                         |
+| `ROODLE_READ_TOKEN` | `src/app/api/news/turns/route.ts` | Bearer token for `GET /api/news/turns`, the turn feed the news repo (ложь) polls. Without it the route rejects every request with 401. Lives only in Railway and news's Actions secrets. |
+| `NEWS_PLAYER_EMAIL` | `src/app/api/news/turns/route.ts` | Email of the player whose turns `GET /api/news/turns` reports. Required by that route; never taken from the request.                                                                     |
 
 ## Database and migrations
 
@@ -102,7 +104,8 @@ In short:
 - The app service `roodle-web` runs `npm run build` then `npm run start`.
 - A Railway Postgres add-on provides `DATABASE_URL` through a service reference.
   Migrations and built-in pack seeding run on first boot.
-- Set `AUTH_SECRET` and `APP_URL` on the service.
+- Set `AUTH_SECRET` and `APP_URL` on the service, plus `ROODLE_READ_TOKEN` and
+  `NEWS_PLAYER_EMAIL` for the news feed (`GET /api/news/turns`).
 - Email goes through Resend with a dedicated, revocable `roodle` key, sent from a
   verified domain. See **D9** for the account trade-off and the rate limits on
   `/api/auth/request`.
